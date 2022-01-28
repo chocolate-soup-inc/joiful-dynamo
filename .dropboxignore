@@ -1,0 +1,25 @@
+node_modules
+jspm_packages
+
+# Serverless directories
+.serverless
+
+# Webpack directories
+.webpack
+
+# Webpack directories
+.esbuild
+
+# Sublime Files
+*.sublime-project
+*.sublime-workspace
+
+# Postgraphile Cache
+postgraphile*.cache
+
+# Postgraphile Schema
+schema.graphql
+
+# Local DynamoDB
+.dynamodb
+

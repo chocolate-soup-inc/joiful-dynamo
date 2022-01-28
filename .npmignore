@@ -1,0 +1,10 @@
+src
+tsconfig.json
+.eslintignore
+.eslintrc.js
+.jest.config
+.prettierrc
+.dropboxignore
+.tsconfig.eslint.json
+__tests__
+node_modules
