@@ -24,3 +24,5 @@ schema.graphql
 .dynamodb
 
 ./lib
+
+.vscode
