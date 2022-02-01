@@ -1,17 +1,22 @@
 import 'reflect-metadata';
 import Joi from 'joi';
-import { setPropGettersAndSetters } from './prop';
-import { getHasOneModel, getHasOneModels } from './hasOne';
+import { getHasOneModel, getHasOneNestedModels } from './hasOne';
+import { getHasManyModel, getHasManyNestedModels } from './hasMany';
 
 const validateMetadataKey = Symbol('validate');
+
+export const getValidatedFields = (target: any): string[] => {
+  return Reflect.getMetadata(validateMetadataKey, target) || [];
+};
+
+export const getPropertyValidate = (target: any, key: string): Joi.Schema | undefined => {
+  return Reflect.getMetadata(validateMetadataKey, target, key);
+};
 
 export function validate(joi: Joi.Schema) {
   return (target: any, propertyKey: string): void => {
     // ADD THE JOI SCHEMA TO THE METADATA
     Reflect.defineMetadata(validateMetadataKey, joi, target, propertyKey);
-    Reflect.defineMetadata(validateMetadataKey, joi, target.constructor, propertyKey);
-
-    setPropGettersAndSetters(target, propertyKey);
 
     // SET THE LIST OF VALIDATED PROPERTIES IN THE INSTANCE
     let properties: string[] = Reflect.getMetadata(validateMetadataKey, target);
@@ -22,49 +27,51 @@ export function validate(joi: Joi.Schema) {
       properties = [propertyKey];
       Reflect.defineMetadata(validateMetadataKey, properties, target);
     }
-
-    Reflect.defineMetadata(validateMetadataKey, properties, target.constructor);
   };
 }
 
-export const getValidatedFields = (target: any): string[] => {
-  return Reflect.getMetadata(validateMetadataKey, target);
-};
-
-export const getPropertyValidate = (target: any, key: string): Joi.Schema => {
-  return Reflect.getMetadata(validateMetadataKey, target, key);
-};
-
 export function joiSchema(target: any) {
-  const keys = getValidatedFields(target);
+  const validatedKeys = getValidatedFields(target);
   const joiObject = Joi.object().unknown(true);
 
-  let joiKeys = {};
-  const modelsDescriptors = getHasOneModels(target);
-  if (keys != null && keys.length > 0) {
-    joiKeys = keys.reduce((agg, key: string) => {
-      if (!modelsDescriptors?.includes(key)) {
-        agg[key] = getPropertyValidate(target, key);
-      }
-      return agg;
-    }, {} as Record<string, Joi.Schema>);
-  }
+  const hasOneModels = getHasOneNestedModels(target);
+  const hasManyModels = getHasManyNestedModels(target);
+  const allModels = hasOneModels.concat(hasManyModels);
 
-  if (modelsDescriptors != null) {
-    for (const model of modelsDescriptors) {
+  const joiKeys = validatedKeys.reduce((agg, key) => {
+    const schema = getPropertyValidate(target, key);
+    if (!allModels.includes(key) && schema != null) agg[key] = schema;
+    return agg;
+  }, {} as Record<string, Joi.Schema>);
+
+  [{
+    modelsArray: hasOneModels,
+    getModelFunc: getHasOneModel,
+  }, {
+    modelsArray: hasManyModels,
+    getModelFunc: getHasManyModel,
+  }].forEach(({ modelsArray, getModelFunc }) => {
+    for (const model of modelsArray) {
       const {
         model: ModelClass,
         opts,
-      } = getHasOneModel(target, model);
-      let modelJoiObject = ModelClass.joiSchema;
-      if (opts && opts.required) {
-        modelJoiObject = modelJoiObject.required();
-      }
-      joiKeys[model] = modelJoiObject;
-    }
-  }
+      } = getModelFunc(target, model) || {};
 
-  return joiObject.keys(joiKeys);
+      let schema = joiSchema(ModelClass.prototype);
+      if (schema != null) {
+        if (opts && opts.required) {
+          schema = schema.required();
+        }
+
+        joiKeys[model] = schema;
+      }
+    }
+  });
+
+  // console.log(joiKeys);
+
+  if (Object.keys(joiKeys).length > 0) return joiObject.keys(joiKeys);
+  return joiObject;
 }
 
 export function validateAttributes(target: any, item: Record<string, any>) {

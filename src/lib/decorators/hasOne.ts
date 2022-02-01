@@ -1,28 +1,112 @@
 import 'reflect-metadata';
 import _ from 'lodash';
-import { getProps } from './prop';
-import { isObject } from '../utils/isObject';
+import Joi from 'joi';
+import { getAliasesMap } from './aliases';
+import { Constructor, RelationModel, RelationOptions } from './decoratorTypes';
 
-const hasOneMetadataKey = Symbol('hasOne');
-const hasOnePropertiesMetadataKey = Symbol('hasOneProperties');
+const hasOneMetadataKey = 'hasOne';
+const hasOnePropertiesMetadataKey = 'hasOneProperties';
 
-type Constructor = { new(...args) };
+export function getHasOneModels(target: any): string[] | undefined {
+  return Reflect.getMetadata(hasOneMetadataKey, target);
+}
 
-type Options = {
-  required?: boolean,
-};
+export function getHasOneModel(target: any, propertyKey: string): RelationModel {
+  return Reflect.getMetadata(hasOneMetadataKey, target, propertyKey);
+}
 
-export function hasOne(ChildModel: Constructor, opts?: Options) {
+export function getHasOneNestedModels(target: any): string[] {
+  const models: string[] = getHasOneModels(target) || [];
+
+  return models.filter((model) => {
+    const {
+      opts,
+    } = getHasOneModel(target, model) || {};
+
+    return opts?.nestedObject;
+  });
+}
+
+export function getHasOneNotNestedModels(target: any): string[] {
+  const models: string[] = getHasOneModels(target) || [];
+
+  return models.filter((model) => {
+    const {
+      opts,
+    } = getHasOneModel(target, model) || {};
+
+    return !opts?.nestedObject;
+  });
+}
+
+export function getHasOneProperties(target: any): string[] | undefined {
+  return Reflect.getMetadata(hasOnePropertiesMetadataKey, target);
+}
+
+export function getHasOneProperty(target: any, propertyKey: string): { entity: string, key: string } {
+  return Reflect.getMetadata(hasOnePropertiesMetadataKey, target, propertyKey) || {};
+}
+
+export function setHasOneDescriptor(target: any, modelName: string, ChildModel: Constructor) {
+  const propertyKey = `_${hasOneMetadataKey}_${modelName}`;
+
+  Object.defineProperty(target, modelName, {
+    get() {
+      if (this[propertyKey] == null) this[propertyKey] = new ChildModel();
+      return this[propertyKey];
+    },
+    set(value) {
+      if (value instanceof ChildModel) {
+        this[propertyKey] = value;
+      } else {
+        Joi.assert(
+          value,
+          Joi.object().unknown(true),
+        );
+
+        this[propertyKey] = new ChildModel(value);
+      }
+    },
+    enumerable: true,
+    configurable: false,
+  });
+}
+
+export function setHasOnePropertiesDescriptor(target: any, modelName: string, ChildModel: Constructor) {
+  const propDescriptors = Object.keys(ChildModel.prototype);
+  const aliasDescriptors = Object.keys(getAliasesMap(ChildModel.prototype));
+
+  const descriptors = propDescriptors.concat(aliasDescriptors);
+
+  descriptors.forEach((key) => {
+    const propertyKey = `${modelName}${_.capitalize(key)}`;
+
+    Object.defineProperty(target, propertyKey, {
+      get() {
+        if (this[modelName]) return this[modelName][key];
+        return undefined;
+      },
+      set(value) {
+        if (this[modelName] == null) {
+          this[modelName] = new ChildModel({
+            [key]: value,
+          });
+        } else {
+          this[modelName][key] = value;
+        }
+      },
+      configurable: false,
+    });
+  });
+}
+
+export function hasOne(ChildModel: Constructor, opts?: RelationOptions) {
   return (target: any, propertyKey: string): void => {
     // SET THE LIST OF MODELS
     Reflect.defineMetadata(hasOneMetadataKey, {
       model: ChildModel,
       opts,
     }, target, propertyKey);
-    Reflect.defineMetadata(hasOneMetadataKey, {
-      model: ChildModel,
-      opts,
-    }, target.constructor, propertyKey);
 
     let models: string[] = Reflect.getMetadata(hasOneMetadataKey, target);
 
@@ -37,120 +121,39 @@ export function hasOne(ChildModel: Constructor, opts?: Options) {
       models,
       target,
     );
-    Reflect.defineMetadata(
-      hasOneMetadataKey,
-      models,
-      target.constructor,
-    );
 
-    // SET THE LIST OF PROPERTIES
-    const descriptors = getProps(ChildModel.prototype);
-    const propertyMapping = descriptors.reduce((agg, key) => {
-      agg[`${propertyKey}${_.capitalize(key)}`] = {
-        entity: propertyKey,
-        key,
-        opts,
-      };
-      return agg;
-    }, {} as Record<string, { entity: string, key: string, opts?: Options }>);
-
-    for (const [key, value] of Object.entries(propertyMapping)) {
-      Reflect.defineMetadata(
-        hasOnePropertiesMetadataKey,
-        value,
-        target,
-        key,
-      );
-
-      Reflect.defineMetadata(
-        hasOnePropertiesMetadataKey,
-        value,
-        target.constructor,
-        key,
-      );
-    }
-
-    const currentKeys = Reflect.getMetadata(hasOnePropertiesMetadataKey, target) || [];
-
-    Reflect.defineMetadata(
-      hasOnePropertiesMetadataKey,
-      currentKeys.concat(Object.keys(propertyMapping)),
-      target,
-    );
-
-    Reflect.defineMetadata(
-      hasOnePropertiesMetadataKey,
-      currentKeys.concat(Object.keys(propertyMapping)),
-      target.constructor,
-    );
+    setHasOneDescriptor(target, propertyKey, ChildModel);
+    setHasOnePropertiesDescriptor(target, propertyKey, ChildModel);
   };
 }
 
-export function getHasOneModels(target: any): string[] | undefined {
-  return Reflect.getMetadata(hasOneMetadataKey, target);
-}
+export function transformHasOneAttributes(target: any, item: Record<string, any>) {
+  const finalAttributes = _.cloneDeep(item);
 
-export function getHasOneModel(target: any, propertyKey: string): {
-  model: any,
-  opts?: Options,
-} {
-  return Reflect.getMetadata(hasOneMetadataKey, target, propertyKey);
-}
+  const nestedModels: string[] = getHasOneNestedModels(target) || [];
+  for (const model of nestedModels) {
+    delete finalAttributes[model];
 
-export function getHasOneProperties(target: any): string[] | undefined {
-  return Reflect.getMetadata(hasOnePropertiesMetadataKey, target);
-}
+    if (item[model] != null) {
+      const {
+        model: ModelClass,
+      } = getHasOneModel(target, model) || {};
 
-export function getHasOneProperty(target: any, propertyKey: string): { entity: string, key: string } {
-  return Reflect.getMetadata(hasOnePropertiesMetadataKey, target, propertyKey) || {};
-}
+      let instance = item[model];
+      if (!(item[model] instanceof ModelClass)) {
+        instance = new ModelClass(item[model]);
+      }
 
-export function setHasOneDescriptors(target: any) {
-  const modelsDescriptors = getHasOneModels(target);
-
-  if (modelsDescriptors != null) {
-    for (const model of modelsDescriptors) {
-      const { model: ModelClass } = getHasOneModel(target, model);
-      target[`_${model}`] = new ModelClass();
-
-      Object.defineProperty(target, model, {
-        get() {
-          return target[`_${model}`];
-        },
-        set(v) {
-          const targetModel = target[`_${model}`];
-          if (isObject(v)) {
-            if (targetModel == null) {
-              target[`_${model}`] = new ModelClass(v);
-            } else {
-              for (const [key, value] of Object.entries(v)) {
-                targetModel.setAttributeDescriptor(key);
-                targetModel[key] = value;
-              }
-            }
-          } else if (v instanceof ModelClass) target[`_${model}`] = v;
-          else throw new TypeError(`${model} should be of type ${ModelClass.name}`);
-        },
-        configurable: false,
-      });
-    }
-  }
-
-  const modelPropertiesDescriptors = getHasOneProperties(target);
-  if (modelsDescriptors != null && modelPropertiesDescriptors != null) {
-    for (const property of modelPropertiesDescriptors) {
-      const { entity, key } = getHasOneProperty(target, property);
-      if (entity != null && key != null) {
-        Object.defineProperty(target, property, {
-          get() {
-            return target[entity][key];
-          },
-          set(v) {
-            target[entity][key] = v;
-          },
-          configurable: false,
-        });
+      if (Object.keys(instance.attributes).length > 0) {
+        finalAttributes[model] = instance.attributes;
       }
     }
   }
+
+  const notNestedModels: string[] = getHasOneNotNestedModels(target) || [];
+  for (const model of notNestedModels) {
+    delete finalAttributes[model];
+  }
+
+  return finalAttributes;
 }

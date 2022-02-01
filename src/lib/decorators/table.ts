@@ -30,6 +30,7 @@ type Options = {
 
 export function table(name: string, opts?: Options) {
   return (constructor: Function) => {
+    // CONSTRUCTOR IS ACTUALLY THE CLASS ITSELF
     if (name == null) throw new TypeError('Name is required in the table decorator');
 
     const dynamodb = opts?.documentClient || dynamodbDocumentClient;

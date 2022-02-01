@@ -34,27 +34,41 @@ describe('Prop', () => {
     expect(instance.sk).toEqual('2');
   });
 
+  test('When calling the getter method, expected the getAttribute function to be called', () => {
+    const instance = new SimpleModel();
+    const spy = jest.spyOn(instance, 'getAttribute');
+    expect(instance.pk).toBeUndefined();
+    expect(spy).toHaveBeenCalledWith('pk');
+  });
+
+  test('When calling the setter method, expected the setAttribute function to be called', () => {
+    const instance = new SimpleModel();
+    const spy = jest.spyOn(instance, 'setAttribute');
+    instance.pk = '1';
+    expect(spy).toHaveBeenCalledWith('pk', '1');
+  });
+
   test('The primary key and secondary key methds should be set correctly', () => {
     const instance = new SimpleModel();
-    expect(instance.primaryKey).toEqual('pk');
-    expect(instance.secondaryKey).toEqual('sk');
-    expect(instance.createdAtKey).toEqual('_cat');
-    expect(instance.updatedAtKey).toEqual('_uat');
-    expect(SimpleModel.primaryKey).toEqual('pk');
-    expect(SimpleModel.secondaryKey).toEqual('sk');
-    expect(SimpleModel.createdAtKey).toEqual('_cat');
-    expect(SimpleModel.updatedAtKey).toEqual('_uat');
+    expect(instance._primaryKey).toEqual('pk');
+    expect(instance._secondaryKey).toEqual('sk');
+    expect(instance._createdAtKey).toEqual('_cat');
+    expect(instance._updatedAtKey).toEqual('_uat');
+    expect(SimpleModel._primaryKey).toEqual('pk');
+    expect(SimpleModel._secondaryKey).toEqual('sk');
+    expect(SimpleModel._createdAtKey).toEqual('_cat');
+    expect(SimpleModel._updatedAtKey).toEqual('_uat');
   });
 
   test('when using a class without any primary or secondary key it return undefined to the methods', () => {
     const instance = new NoKeysModel();
-    expect(instance.primaryKey).toBeUndefined();
-    expect(instance.secondaryKey).toBeUndefined();
-    expect(instance.createdAtKey).toBeUndefined();
-    expect(instance.updatedAtKey).toBeUndefined();
-    expect(NoKeysModel.primaryKey).toBeUndefined();
-    expect(NoKeysModel.secondaryKey).toBeUndefined();
-    expect(NoKeysModel.createdAtKey).toBeUndefined();
-    expect(NoKeysModel.updatedAtKey).toBeUndefined();
+    expect(instance._primaryKey).toBeUndefined();
+    expect(instance._secondaryKey).toBeUndefined();
+    expect(instance._createdAtKey).toBeUndefined();
+    expect(instance._updatedAtKey).toBeUndefined();
+    expect(NoKeysModel._primaryKey).toBeUndefined();
+    expect(NoKeysModel._secondaryKey).toBeUndefined();
+    expect(NoKeysModel._createdAtKey).toBeUndefined();
+    expect(NoKeysModel._updatedAtKey).toBeUndefined();
   });
 });

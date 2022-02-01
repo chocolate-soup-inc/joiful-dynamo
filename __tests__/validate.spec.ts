@@ -93,9 +93,9 @@ describe('Validation', () => {
           notSchemaAttribute: '  123  ',
         });
 
-        expect(model.pk).toEqual('1');
-        expect(model.sk).toEqual('2');
-        expect(model.notSchemaAttribute).toEqual('  123  ');
+        expect(model.validatedAttributes.pk).toEqual('1');
+        expect(model.validatedAttributes.sk).toEqual('2');
+        expect(model.validatedAttributes.notSchemaAttribute).toEqual('  123  ');
       });
     });
 
@@ -109,17 +109,6 @@ describe('Validation', () => {
         const model = new TestModel(invalidParams);
         expect(model.valid).toBeFalsy();
       });
-
-      test('should set only the valid attributes', () => {
-        const model = new TestModel(invalidParams);
-        expect(model.pk).toBeUndefined();
-        expect(model.sk).toEqual('2');
-      });
-
-      // test('should set the errors object when there are errors', () => {
-      //   const model = new TestModel(invalidParams);
-      //   expect(model.errors.pk).toBeInstanceOf(Error);
-      // });
 
       test('should reset the errors after the errors are fixed', () => {
         const model = new TestModel(invalidParams);

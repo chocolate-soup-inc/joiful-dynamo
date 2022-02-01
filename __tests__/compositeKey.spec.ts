@@ -60,7 +60,7 @@ describe('Composite Keys', () => {
         field2: 2,
       });
 
-      expect(model.transformedData.composite).toEqual('1#2');
+      expect(model.transformedAttributes.composite).toEqual('1#2');
       expect(model.valid).toBeTruthy();
     });
 
@@ -69,7 +69,7 @@ describe('Composite Keys', () => {
         field1: '1',
       });
 
-      expect(model.transformedData.composite).toBeUndefined();
+      expect(model.transformedAttributes.composite).toBeUndefined();
       expect(model.valid).toBeFalsy();
     });
 
@@ -81,7 +81,7 @@ describe('Composite Keys', () => {
       });
 
       expect(model.composite).toEqual('123');
-      expect(model.transformedData.composite).toEqual('1#2');
+      expect(model.transformedAttributes.composite).toEqual('1#2');
     });
 
     test('When the value is set, it is overriden event if the value becomes null', () => {
@@ -91,7 +91,7 @@ describe('Composite Keys', () => {
       });
 
       expect(model.composite).toEqual('123');
-      expect(model.transformedData.composite).toBeUndefined();
+      expect(model.transformedAttributes.composite).toBeUndefined();
       expect(model.valid).toBeFalsy();
     });
 
@@ -102,7 +102,7 @@ describe('Composite Keys', () => {
         field2: '2',
       });
 
-      expect(model.transformedData.composite).toEqual('1---2');
+      expect(model.transformedAttributes.composite).toEqual('1---2');
     });
 
     test('when there is a nested composite key, it works as expected', () => {
@@ -112,7 +112,7 @@ describe('Composite Keys', () => {
         field3: '3',
       });
 
-      expect(model.transformedData).toStrictEqual({
+      expect(model.transformedAttributes).toStrictEqual({
         composite0: '1#2',
         composite1: '1#2#1#2#3',
         composite2: '1#2#3',
@@ -125,7 +125,7 @@ describe('Composite Keys', () => {
 
   describe('Static Class', () => {
     test('It correctly set the composite key with default parameters', () => {
-      expect(TestModel.transformData({
+      expect(TestModel.transformAttributes({
         field1: '1',
         field2: 2,
       })).toStrictEqual({
@@ -136,7 +136,7 @@ describe('Composite Keys', () => {
     });
 
     test('When one of the values is blank, it does not set the composite key', () => {
-      expect(TestModel.transformData({
+      expect(TestModel.transformAttributes({
         field1: '1',
       })).toStrictEqual({
         field1: '1',
@@ -144,7 +144,7 @@ describe('Composite Keys', () => {
     });
 
     test('When the value is set, it is overriden', () => {
-      expect(TestModel.transformData({
+      expect(TestModel.transformAttributes({
         composite: '123',
         field1: '1',
         field2: 2,
@@ -156,7 +156,7 @@ describe('Composite Keys', () => {
     });
 
     test('When the value is set, it is overriden event if the value becomes null', () => {
-      expect(TestModel.transformData({
+      expect(TestModel.transformAttributes({
         composite: '123',
         field1: '1',
       })).toStrictEqual({
@@ -165,7 +165,7 @@ describe('Composite Keys', () => {
     });
 
     test('When the delimiter is set', () => {
-      expect(TestModelWithDelimiter.transformData({
+      expect(TestModelWithDelimiter.transformAttributes({
         composite: '123',
         field1: '1',
         field2: '2',
@@ -177,7 +177,7 @@ describe('Composite Keys', () => {
     });
 
     test('when there is a nested composite key, it works as expected', () => {
-      expect(TestModelWithNestedComposite.transformData({
+      expect(TestModelWithNestedComposite.transformAttributes({
         field1: '1',
         field2: '2',
         field3: '3',

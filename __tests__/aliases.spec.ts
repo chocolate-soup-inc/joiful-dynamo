@@ -32,18 +32,6 @@ describe('Aliases Decorator', () => {
     expect(instance.property).toEqual('3');
   });
 
-  // test('It correctly transforms the data when calling the static transformAliases method', () => {
-  //   expect(TestModel.transformAliases({ alias1: '1' })).toStrictEqual({
-  //     property: '1',
-  //   });
-  //   expect(TestModel.transformAliases({ alias2: '2' })).toStrictEqual({
-  //     property: '2',
-  //   });
-  //   expect(TestModel.transformAliases({ alias3: '3' })).toStrictEqual({
-  //     property: '3',
-  //   });
-  // });
-
   test('It correctly set the aliases when initializing with data', () => {
     const model1 = new TestModel({ alias1: '1' });
     expect(model1.attributes).toStrictEqual({ property: '1' });
@@ -55,5 +43,20 @@ describe('Aliases Decorator', () => {
     expect(model3.alias3).toEqual('1');
     const model4 = new TestModel({ alias3: '3' });
     expect(model4.attributes).toStrictEqual({ property: '3' });
+  });
+
+  test('Expects the transformed attributes to be correct', () => {
+    const instance = new TestModel({ alias1: '1' });
+    instance.alias3 = '2';
+
+    expect(instance.transformedAttributes).toStrictEqual({
+      property: '2',
+    });
+  });
+
+  test('Expects the transformed attributes to be correct in the static method', () => {
+    expect(TestModel.transformAttributes({ alias1: '1', alias3: '2' })).toStrictEqual({
+      property: '2',
+    });
   });
 });

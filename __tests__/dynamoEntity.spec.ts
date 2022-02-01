@@ -25,7 +25,7 @@ class TestModel extends Entity {
     extraProp: string;
 }
 
-describe('Entity', () => {
+describe('Dynamo Entity', () => {
   describe('Database integration', () => {
     describe('Scan', () => {
       test('It should return no items when there is not data in the database', async () => {
@@ -424,7 +424,7 @@ describe('Entity', () => {
       test('It should throw an error if nothing is set', async () => {
         const instance = new TestModel();
 
-        await expect(() => instance.create()).rejects.toThrowError('One of the required keys was not given a value');
+        await expect(() => instance.create()).rejects.toThrowError('You cannot save an instance with no attributes at all.');
       });
 
       describe('When there is some data registered', () => {

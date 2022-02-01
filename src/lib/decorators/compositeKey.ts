@@ -8,10 +8,20 @@ type Options = {
   delimiter?: string;
 };
 
+export function getCompositeKeys(target: any): string[] {
+  return Reflect.getMetadata(compositeMetadataKey, target) || [];
+}
+
+export function getCompositeKey(target: any, key: string): string[] | undefined {
+  return Reflect.getMetadata(compositeMetadataKey, target, key);
+}
+
+export function getCompositeKeyDelimiter(target: any): string {
+  return Reflect.getMetadata(delimiterMetadataKey, target) || '#';
+}
+
 export function compositeKey(fields: string[], opts?: Options) {
-  return function (target: any, propertyKey: string): void {
-    if (fields == null) throw new TypeError('Fields are required in compositeKey decorator.');
-
+  return (target: any, propertyKey: string): void => {
     Reflect.defineMetadata(
       delimiterMetadataKey,
       opts?.delimiter || '#',
@@ -19,22 +29,9 @@ export function compositeKey(fields: string[], opts?: Options) {
     );
 
     Reflect.defineMetadata(
-      delimiterMetadataKey,
-      opts?.delimiter || '#',
-      target.constructor,
-    );
-
-    Reflect.defineMetadata(
       compositeMetadataKey,
       fields,
       target,
-      propertyKey,
-    );
-
-    Reflect.defineMetadata(
-      compositeMetadataKey,
-      fields,
-      target.constructor,
       propertyKey,
     );
 
@@ -45,7 +42,7 @@ export function compositeKey(fields: string[], opts?: Options) {
         const maxDependantIndex = Math.max(...properties.map((p) => {
           return {
             property: p,
-            fields: Reflect.getMetadata(compositeMetadataKey, target, p),
+            fields: getCompositeKey(target, p),
           };
         }).filter(({ fields: f }) => {
           return f != null && f.includes(propertyKey);
@@ -70,28 +67,10 @@ export function compositeKey(fields: string[], opts?: Options) {
       properties,
       target,
     );
-
-    Reflect.defineMetadata(
-      compositeMetadataKey,
-      properties,
-      target.constructor,
-    );
   };
 }
 
-export function getCompositeKeys(target: any): string[] {
-  return Reflect.getMetadata(compositeMetadataKey, target) || [];
-}
-
-export function getCompositeKey(target: any, key: string): string[] | undefined {
-  return Reflect.getMetadata(compositeMetadataKey, target, key);
-}
-
-export function getCompositeKeyDelimiter(target: any): string {
-  return Reflect.getMetadata(delimiterMetadataKey, target) || '#';
-}
-
-export function transformCompositeKeys(target: any, item: Record<string, any>) {
+export function transformCompositeKeyAttributes(target: any, item: Record<string, any>) {
   const newItem = _.cloneDeep(item);
   const compositeKeys = getCompositeKeys(target);
 

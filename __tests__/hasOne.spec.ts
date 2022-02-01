@@ -24,10 +24,10 @@ class TestModel extends Entity {
   @prop()
     sk: number;
 
-  @hasOne(ChildModel)
+  @hasOne(ChildModel, { nestedObject: true })
     childProperty: ChildModel;
 
-  @hasOne(ChildModel, { required: true })
+  @hasOne(ChildModel, { required: true, nestedObject: true })
     child2: ChildModel;
 }
 
@@ -105,7 +105,7 @@ describe('Has one', () => {
       sk: 2,
     });
 
-    expect(model.completeAttributes).toStrictEqual({
+    expect(model.transformedAttributes).toStrictEqual({
       pk: 1,
       sk: 2,
       childProperty: {
@@ -118,7 +118,7 @@ describe('Has one', () => {
   test('when child is blank, it should not include its key', () => {
     const model = new TestModel({ pk: 1, sk: 2 });
 
-    expect(model.completeAttributes).toStrictEqual({
+    expect(model.transformedAttributes).toStrictEqual({
       pk: 1,
       sk: 2,
     });
@@ -138,7 +138,7 @@ describe('Has one', () => {
     });
 
     expect(model.valid).toBeTruthy();
-    expect(model.completeAttributes).toStrictEqual({
+    expect(model.transformedAttributes).toStrictEqual({
       pk: 1,
       sk: 2,
       childProperty: {
@@ -180,6 +180,18 @@ describe('Has one', () => {
     })).not.toThrowError();
 
     expect(TestModel.validate({
+      pk: 1,
+      sk: 2,
+      childProperty: {
+        alias1: '1',
+        sk: '2',
+      },
+      child2: {
+        alias1: '1',
+      },
+    })).toBeTruthy();
+
+    expect(TestModel.validateAttributes({
       pk: 1,
       sk: 2,
       childProperty: {

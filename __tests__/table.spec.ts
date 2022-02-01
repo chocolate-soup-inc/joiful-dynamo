@@ -10,19 +10,19 @@ class TestModel extends Entity {}
 describe('Table Decorator', () => {
   it('sets the tableName correctly in the instance', () => {
     const instance = new TestModel();
-    expect(instance.tableName).toEqual(tableName);
+    expect(instance._tableName).toEqual(tableName);
   });
 
   it('sets the tableName correctly in the static method', () => {
-    expect(TestModel.tableName).toEqual(tableName);
+    expect(TestModel._tableName).toEqual(tableName);
   });
 
   it('sets the dynamodb document client', () => {
     const instance = new TestModel();
-    expect(instance.dynamodb).toBeInstanceOf(AWS.DynamoDB.DocumentClient);
+    expect(instance._dynamodb).toBeInstanceOf(AWS.DynamoDB.DocumentClient);
   });
 
   it('sets the dynamodb document client in the static class', () => {
-    expect(TestModel.dynamodb).toBeInstanceOf(AWS.DynamoDB.DocumentClient);
+    expect(TestModel._dynamodb).toBeInstanceOf(AWS.DynamoDB.DocumentClient);
   });
 });
