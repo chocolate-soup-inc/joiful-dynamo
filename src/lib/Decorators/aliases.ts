@@ -3,14 +3,17 @@ import { setPropGettersAndSetters } from './prop';
 
 const aliasesMapMetadataKey = Symbol('aliasesMap');
 
+/** @internal */
 export const getAliasesMap = (target: any): Record<string, string> => {
   return Reflect.getMetadata(aliasesMapMetadataKey, target) || {};
 };
 
+/** @internal */
 export const getAliasTarget = (target: any, key: string): string => {
   return getAliasesMap(target)[key] || key;
 };
 
+/** @internal */
 export function setAliasDescriptor(target: any, aliasKey: string, propertyKey: string): void {
   // SET THE ALIAS MAP IN THE INSTANCE
   let aliasesMap: Record<string, string> = Reflect.getMetadata(aliasesMapMetadataKey, target);
@@ -64,6 +67,8 @@ export function setAliasDescriptor(target: any, aliasKey: string, propertyKey: s
  * console.log(model.myProperty) // 3
  * console.log(model.aliasProperty) // 3
  * ```
+ *
+ * @category Property Decorators
  */
 export function aliasTo(aliasToName: string) {
   return (target: any, propertyKey: string): void => {
@@ -106,6 +111,8 @@ export function aliasTo(aliasToName: string) {
  * console.log(model.alias1) // 3
  * console.log(model.alias2) // 3
  * ```
+ *
+ * @category Property Decorators
  */
 export function aliases(aliasesNames: string[]) {
   return (target: any, propertyKey: string): void => {
@@ -118,6 +125,7 @@ export function aliases(aliasesNames: string[]) {
   };
 }
 
+/** @internal */
 export function transformAliasAttributes(target: any, item: Record<string, any>) {
   return Object.entries(item).reduce((agg, [key, value]: [string, any]) => {
     agg[getAliasTarget(target, key)] = value;

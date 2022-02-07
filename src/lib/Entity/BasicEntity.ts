@@ -12,7 +12,7 @@ import {
   transformHasManyAttributes,
   transformHasOneAttributes,
   validateAttributes,
-} from '../decorators';
+} from '../Decorators';
 
 export class BasicEntity {
   protected _attributes: Record<string, any> = {};
@@ -28,10 +28,16 @@ export class BasicEntity {
     this.setAttribute = this.setAttribute.bind(this);
   }
 
+  /**
+   * Gets all the attributes from the instance before any transformation. Alias are already removed and only the final properties are returned.
+   */
   get attributes(): Record<string, any> {
     return this._attributes || {};
   }
 
+  /**
+   * Sets the attributes from the instance. It deals with children properties too.
+   */
   set attributes(attributes: Record<string, any>) {
     // WE SHOULD ORGANIZE THE ENTRIES ORDER SO IT SETS THE CHILD PROPERTIES BEFORE SETTING THE REST (SO IT DOES NOT OVERWRITE)
     const entries = Object.entries(attributes);
@@ -58,6 +64,7 @@ export class BasicEntity {
     this.attributes[key] = value;
   }
 
+  /** @internal */
   get enumerableAttributes(): Record<string, any> {
     return Object.keys(this.constructor.prototype).reduce((agg, key) => {
       let value;
@@ -72,6 +79,7 @@ export class BasicEntity {
     }, {} as Record<string, any>);
   }
 
+  /** @internal */
   get transformedAttributes(): Record<string, any> {
     let attributes = transformAliasAttributes(this, this.enumerableAttributes);
     attributes = transformHasManyAttributes(this, attributes);
@@ -81,10 +89,14 @@ export class BasicEntity {
     return attributes;
   }
 
+  /** @internal */
   get validatedAttributes(): Record<string, any> {
     return validateAttributes(this, this.transformedAttributes);
   }
 
+  /**
+   * Validates the instance attributes and returns the final transformed and validated attributes (before any dynamodb specific transformations like addin the entity name to the pk and sk, for example).
+   */
   get finalAttributes(): Record<string, any> {
     return this.validatedAttributes;
   }
@@ -103,6 +115,7 @@ export class BasicEntity {
 
   protected _error: Joi.ValidationError | undefined;
 
+  /** @internal */
   validateRelatedModels(_throw: boolean = false): boolean {
     for (const hasOneModel of getHasOneNotNestedModels(this)) {
       const instance: BasicEntity | undefined = this[`_noInitializer${_.capitalize(hasOneModel)}`];
@@ -137,6 +150,10 @@ export class BasicEntity {
     return true;
   }
 
+  /**
+   * Validates the current instance.
+   * @param {boolean} _throw - If true, throws an error if the instance is invalid. If false, saves the error to the error property and returns true or false.
+   */
   validate(_throw: boolean = false): boolean {
     this._error = undefined;
     try {
@@ -155,10 +172,16 @@ export class BasicEntity {
     }
   }
 
+  /**
+   * Returns a boolean indicating if the current instance is valid or not.
+   */
   get valid() {
     return this.validate();
   }
 
+  /**
+   * If a validation was ran without throwing exceptions, the errors found are kept in the error variable. This getter returns that error.
+   */
   get error() {
     return this._error;
   }
@@ -167,14 +190,24 @@ export class BasicEntity {
 
   // ---------------- STATIC METHODS ----------------
 
+  /** @ignore */
   static transformAttributes(item: Record<string, any>): Record<string, any> {
     return new this(item).transformedAttributes;
   }
 
+  /**
+   * Returns the transformed attributes of the item. Similar to {@link Entity.finalAttributes | Instance finalAttributes getter}.
+   * @param {Record<string, any>} item - The attributes to use for the transformation.
+   */
   static validateAttributes(item: Record<string, any>): Record<string, any> {
     return new this(item).validatedAttributes;
   }
 
+  /**
+   * Creates as instance of the current class with the attributes provided and validates it. See {@link Entity.validate | Instance Validate} for more details.
+   * @param {Record<string, any>} item - The attributes to use when creating the instance.
+   * @param {boolean} [_throw = true] - If it should throw an error or not when validating.
+   */
   static validate(item: Record<string, any>, _throw: boolean = true) {
     return new this(item).validate(_throw);
   }

@@ -1,8 +1,8 @@
 import * as Joi from 'joi';
-import { Entity } from '../src/lib/classes/Entity';
-import { compositeKey } from '../src/lib/decorators/compositeKey';
-import { prop } from '../src/lib/decorators/prop';
-import { validate } from '../src/lib/decorators/validate';
+import { Entity } from '../src/lib/Entity';
+import { compositeKey } from '../src/lib/Decorators/compositeKey';
+import { prop } from '../src/lib/Decorators/prop';
+import { validate } from '../src/lib/Decorators/validate';
 
 class TestModel extends Entity {
   @prop()

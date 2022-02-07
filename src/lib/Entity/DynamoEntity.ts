@@ -10,12 +10,17 @@ import {
   getTableDynamoDbInstance,
   getTableName,
   getUpdatedAtKey,
-} from '../decorators';
+} from '../Decorators';
 import { QueryOptions, ScanOptions } from '../utils/DynamoEntityTypes';
 import { BasicEntity } from './BasicEntity';
 import { DynamoPaginator } from './DynamoPaginator';
 
 export class DynamoEntity extends BasicEntity {
+  /**
+   * Entity constructor.
+   * @param {Record<string, any>} item - Object containing initial attributes to be set.
+   * @returns {Entity} - New entity instance
+   */
   constructor(item?: Record<string, any>) {
     super(item);
 
@@ -28,32 +33,46 @@ export class DynamoEntity extends BasicEntity {
 
   // ---------------- BASIC SETTINGS ----------------
 
+  /** @internal */
   get _dynamodb() { return getTableDynamoDbInstance(this.constructor); }
 
+  /** @internal */
   static get _dynamodb() { return this.prototype._dynamodb; }
 
+  /** @internal */
   get _tableName() { return getTableName(this.constructor); }
 
+  /** @internal */
   static get _tableName() { return this.prototype._tableName; }
 
+  /** @internal */
   get _entityName() { return this.constructor.name; }
 
+  /** @internal */
   static get _entityName() { return this.name; }
 
+  /** @internal */
   get _primaryKey() { return getPrimaryKey(this); }
 
+  /** @internal */
   static get _primaryKey() { return this.prototype._primaryKey; }
 
+  /** @internal */
   get _secondaryKey() { return getSecondaryKey(this); }
 
+  /** @internal */
   static get _secondaryKey() { return this.prototype._secondaryKey; }
 
+  /** @internal */
   get _createdAtKey() { return getCreatedAtKey(this); }
 
+  /** @internal */
   static get _createdAtKey() { return this.prototype._createdAtKey; }
 
+  /** @internal */
   get _updatedAtKey() { return getUpdatedAtKey(this); }
 
+  /** @internal */
   static get _updatedAtKey() { return this.prototype._updatedAtKey; }
 
   // ---------------- BASIC SETTINGS ----------------
@@ -202,6 +221,27 @@ export class DynamoEntity extends BasicEntity {
   // ---------------- TABLE SUPPORT METHODS ----------------
 
   // ---------------- TABLE METHODS ----------------
+  /**
+   * Deletes an item with the specified key from the database using the <a target="_blank" href="https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/DynamoDB/DocumentClient.html#delete-property">aws-sdk documentclient delete method</a>.
+   * @param {AWS.DynamoDB.DocumentClient.Key} key - This argument should be the key before preparing it to save to the database. See example for more details.
+   * @remarks
+   * &nbsp;
+   * - The model primary key and secondary key are automatically converted to the pattern of how data is saved to the database.
+   * - If the record does not exist, it throws an error. If the record exists, it returns the attributes of the delete object as it is on the AWS SDK response.
+   *
+   * @example
+   * ```
+   * class Model extends Entity {
+   *   @prop({ primaryKey: true });
+   *   pk: string;
+   *
+   *   @prop({ secondaryKey: true });
+   *   sk: string;
+   * }
+   *
+   * await Model.deleteItem({ pk: '1', sk: '2' }); // This will delete a record in the database with pk as 'Model-1' and sk as 'Model-2'.
+   * ```
+   */
   static async deleteItem(key: AWS.DynamoDB.DocumentClient.Key) {
     const response = await this._dynamodb.delete(
       this.prepareOptsForDelete({
@@ -218,6 +258,27 @@ export class DynamoEntity extends BasicEntity {
     return response.Attributes;
   }
 
+  /**
+   * Retrieve an item with the specified key from the database using the <a target="_blank" href="https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/DynamoDB/DocumentClient.html#get-property">aws-sdk documentclient get method</a>.
+   * @param {AWS.DynamoDB.DocumentClient.Key} key - This argument should be the key before preparing it to save to the database. See example for more details.
+   * @remarks
+   * &nbsp;
+   * - The model primary key and secondary key are automatically converted to the pattern of how data is saved to the database.
+   * - If the record does not exist, it throws an error. If the record exists, it returns a new instance of the model with the attributes already set.
+   * @example
+   * ```
+   * class Model extends Entity {
+   *   @prop({ primaryKey: true });
+   *   pk: string;
+   *
+   *   @prop({ secondaryKey: true });
+   *   sk: string;
+   * }
+   *
+   * const instance = await Model.getItem({ pk: '1', sk: '2' }); // This will retrieve a record in the database with pk as 'Model-1' and sk as 'Model-2'.
+   * console.log(instance.pk) // '1'
+   * ```
+   */
   static async getItem(key: AWS.DynamoDB.DocumentClient.Key) {
     const {
       Item: item,
@@ -231,23 +292,89 @@ export class DynamoEntity extends BasicEntity {
     return item;
   }
 
+  /**
+   * Queries the database using the <a target="_blank" href="https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/DynamoDB/DocumentClient.html#query-property">aws-sdk documentclient query method</a>.
+   * @param {QueryOptions} opts - A list of options to be used by the query method. Similar to do the options from <a target="_blank" href="https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/DynamoDB/DocumentClient.html#query-property">aws-sdk documentclient query metod]</a>
+   * @returns {DynamoPaginator} - A paginator instance.
+   * @remarks
+   * &nbsp;
+   * - It automatically filter the results to return only the ones matching the current class entity name using a condition expression.
+   * @example
+   * ```
+   * class Model extends Entity {
+   *   @prop({ primaryKey: true });
+   *   pk: string;
+   *
+   *   @prop({ secondaryKey: true });
+   *   sk: string;
+   * }
+   *
+   * const paginator = await Model.query({
+   *   IndexName: 'bySk',
+   *   KeyConditionExpression: 'sk = :v',
+   *   ExpressionAttributeValues: {
+   *     ':v': 'TestModel-query-2',
+   *   },
+   * });
+   *
+   * console.log(paginator.items) // Returns an array of instances of Model class.
+   * console.log(paginator.morePages) // Boolean meaning if there are more records available or not.
+   * await paginator.next(); // Fetches the next page if it exists.
+   * console.log(paginator.items) // Returns an array of all fetched instances of Model class.
+   * console.log(paginator.lastPageItems) // Returns an array of last page fetched instances of Model class.
+   * ```
+   */
   static async query(opts: QueryOptions) {
     const paginator = this.createPaginator(this._query.bind(this), opts);
     await paginator.next();
     return paginator;
   }
 
+  /**
+   * Similar to the {@link Entity.query | query method}, but automatically queries all the pages until there are no more records.
+   * @returns {DynamoPaginator} - A paginator instance.
+   */
   static async queryAll(opts: QueryOptions) {
     const paginator = await this.createPaginator(this._query.bind(this), opts);
     return paginator.getAll();
   }
 
+  /**
+   * Scans the database using the <a target="_blank" href="https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/DynamoDB/DocumentClient.html#scan-property">aws-sdk documentclient scan method</a>.
+   * @param {ScanOptions} opts - A list of options to be used by the scan method. Similar to do the options from <a target="_blank" href="https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/DynamoDB/DocumentClient.html#scan-property">aws-sdk documentclient scan metod]</a>
+   * @returns {DynamoPaginator} - A paginator instance.
+   * @remarks
+   * &nbsp;
+   * - It automatically filter the results to return only the ones matching the current class entity name using a condition expression.
+   * @example
+   * ```
+   * class Model extends Entity {
+   *   @prop({ primaryKey: true });
+   *   pk: string;
+   *
+   *   @prop({ secondaryKey: true });
+   *   sk: string;
+   * }
+   *
+   * const paginator = await Model.scan();
+   *
+   * console.log(paginator.items) // Returns an array of instances of Model class.
+   * console.log(paginator.morePages) // Boolean meaning if there are more records available or not.
+   * await paginator.next(); // Fetches the next page if it exists.
+   * console.log(paginator.items) // Returns an array of all fetched instances of Model class.
+   * console.log(paginator.lastPageItems) // Returns an array of last page fetched instances of Model class.
+   * ```
+   */
   static async scan(opts?: ScanOptions) {
     const paginator = this.createPaginator(this._scan.bind(this), opts);
     await paginator.next();
     return paginator;
   }
 
+  /**
+   * Similar to the {@link Entity.scan | scan method}, but automatically queries all the pages until there are no more records.
+   * @returns {DynamoPaginator} - A paginator instance.
+   */
   static async scanAll(opts?: ScanOptions) {
     const paginator = await this.createPaginator(this._scan.bind(this), opts);
     return paginator.getAll();
@@ -256,6 +383,7 @@ export class DynamoEntity extends BasicEntity {
 
   // ---------------- INSTANCE SUPPORT METHODS ----------------
 
+  /** @internal */
   get dynamoAttributes() {
     let attributes = this.validatedAttributes;
 
@@ -272,6 +400,7 @@ export class DynamoEntity extends BasicEntity {
     return attributes;
   }
 
+  /** @internal */
   parseDynamoAttributes(item: Record<string, any>) {
     delete item._entityName;
 
@@ -285,6 +414,27 @@ export class DynamoEntity extends BasicEntity {
 
   // ---------------- INSTANCE METHODS ----------------
 
+  /**
+   * Retrieve current item data from the database using the <a target="_blank" href="https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/DynamoDB/DocumentClient.html#get-property">aws-sdk documentclient get method</a>.
+   * @remarks
+   * &nbsp;
+   * - The model primary key and secondary key are automatically converted to the pattern of how data is saved to the database.
+   * - If the record does not exist, it throws an error. If the record exists, it updates the current instance attributes and return the instance.
+   * @example
+   * ```
+   * class Model extends Entity {
+   *   @prop({ primaryKey: true });
+   *   pk: string;
+   *
+   *   @prop({ secondaryKey: true });
+   *   sk: string;
+   * }
+   *
+   * const instance = new Model({ pk: '1', sk: '2' });
+   * await instance.load();
+   * console.log(instance.otherAttributeFromDatabase) // value loaded from the database.
+   * ```
+   */
   async load() {
     const pk = this._primaryKey;
     const sk = this._secondaryKey;
@@ -307,6 +457,7 @@ export class DynamoEntity extends BasicEntity {
     }
   }
 
+  /** @internal */
   get relationsUpdateAttributes() {
     const hasOneEntities = getHasOneNotNestedModels(this).reduce((agg, m) => {
       if (this[`_noInitializer${_.capitalize(m)}`] == null) return agg;
@@ -356,6 +507,7 @@ export class DynamoEntity extends BasicEntity {
     }));
   }
 
+  /** @internal */
   get createAttributes() {
     if (!this.valid) throw new Error('The instance is invalid');
 
@@ -375,6 +527,28 @@ export class DynamoEntity extends BasicEntity {
     };
   }
 
+  /**
+   * Creates the current item in database using the <a target="_blank" href="https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/DynamoDB/DocumentClient.html#put-property">aws-sdk documentclient put method</a>.
+   * @remarks
+   * &nbsp;
+   * - The model primary key and secondary key are automatically converted to the pattern of how data is saved to the database.
+   * - The createdAt and updatedAt are also set if the class contains a prop for them.
+   * - A _entity column is also added to the attributes with the current class name.
+   * - If the record already exists, it gets overwritten.
+   * @example
+   * ```
+   * class Model extends Entity {
+   *   @prop({ primaryKey: true });
+   *   pk: string;
+   *
+   *   @prop({ secondaryKey: true });
+   *   sk: string;
+   * }
+   *
+   * const instance = new Model({ pk: '1', sk: '2' });
+   * await instance.create();
+   * ```
+   */
   async create() {
     // THIS NEED TO COME BEFORE THE CREATE ATTRIBUTES!
     const relAttributes = this.relationsUpdateAttributes;
@@ -395,6 +569,7 @@ export class DynamoEntity extends BasicEntity {
     return this;
   }
 
+  /** @internal */
   get updateAttributes() {
     if (!this.valid) throw new Error('The instance is invalid');
 
@@ -459,6 +634,28 @@ export class DynamoEntity extends BasicEntity {
     return ret;
   }
 
+  /**
+   * Updates or creates the current item in database using the <a target="_blank" href="https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/DynamoDB/DocumentClient.html#update-property">aws-sdk documentclient update method</a>.
+   * @remarks
+   * &nbsp;
+   * - The model primary key and secondary key are automatically converted to the pattern of how data is saved to the database.
+   * - If the record is new, the createdAt is set.
+   * - If the record is new or not, the updatedAt is set.
+   * - A _entity column is also added to the attributes with the current class name.
+   * @example
+   * ```
+   * class Model extends Entity {
+   *   @prop({ primaryKey: true });
+   *   pk: string;
+   *
+   *   @prop({ secondaryKey: true });
+   *   sk: string;
+   * }
+   *
+   * const instance = new Model({ pk: '1', sk: '2' });
+   * await instance.update();
+   * ```
+   */
   async update() {
     // THIS NEED TO BE CALLED IN THIS ORDER!
     const relAttributes = this.relationsUpdateAttributes;

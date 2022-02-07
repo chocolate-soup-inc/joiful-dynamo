@@ -1,10 +1,10 @@
 /* eslint-disable max-classes-per-file */
 import * as Joi from 'joi';
-import { Entity } from '../src/lib/classes/Entity';
-import { aliases } from '../src/lib/decorators/aliases';
-import { hasOne } from '../src/lib/decorators/hasOne';
-import { prop } from '../src/lib/decorators/prop';
-import { validate } from '../src/lib/decorators/validate';
+import { Entity } from '../src/lib/Entity';
+import { aliases } from '../src/lib/Decorators/aliases';
+import { hasOne } from '../src/lib/Decorators/hasOne';
+import { prop } from '../src/lib/Decorators/prop';
+import { validate } from '../src/lib/Decorators/validate';
 
 class ChildModel extends Entity {
   @prop()

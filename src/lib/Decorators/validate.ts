@@ -5,10 +5,12 @@ import { getHasManyModel, getHasManyNestedModels, getHasManyNotNestedModels } fr
 
 const validateMetadataKey = Symbol('validate');
 
+/** @internal */
 export const getValidatedFields = (target: any): string[] => {
   return Reflect.getMetadata(validateMetadataKey, target) || [];
 };
 
+/** @internal */
 export const getPropertyValidate = (target: any, key: string): Joi.Schema | undefined => {
   return Reflect.getMetadata(validateMetadataKey, target, key);
 };
@@ -41,6 +43,8 @@ export const getPropertyValidate = (target: any, key: string): Joi.Schema | unde
  * model.pk = '   1 2   ';
  * console.log(model.validatedAttributes) // { pk: '1 2', sk: '2' } # The joi transfromation happens when validating but doesn't change the original attributes. But the transformed attributes are the ones used on save.
  * ```
+ *
+ * @category Property Decorators
  */
 export function validate(joi: Joi.Schema) {
   return (target: any, propertyKey: string): void => {
@@ -59,6 +63,7 @@ export function validate(joi: Joi.Schema) {
   };
 }
 
+/** @internal */
 export function joiSchema(target: any) {
   const validatedKeys = getValidatedFields(target);
   const joiObject = Joi.object().unknown(true);
@@ -109,6 +114,7 @@ export function joiSchema(target: any) {
   return joiObject;
 }
 
+/** @internal */
 export function validateAttributes(target: any, item: Record<string, any>) {
   const schema = joiSchema(target);
 

@@ -5,14 +5,17 @@ import { Constructor, RelationModel, RelationOptions } from './decoratorTypes';
 
 const hasManyMetadataKey = Symbol('hasMany');
 
+/** @internal */
 export function getHasManyModels(target: any): string[] | undefined {
   return Reflect.getMetadata(hasManyMetadataKey, target);
 }
 
+/** @internal */
 export function getHasManyModel(target: any, propertyKey: string): RelationModel {
   return Reflect.getMetadata(hasManyMetadataKey, target, propertyKey);
 }
 
+/** @internal */
 export function getHasManyNestedModels(target: any): string[] {
   const models: string[] = getHasManyModels(target) || [];
 
@@ -25,6 +28,7 @@ export function getHasManyNestedModels(target: any): string[] {
   });
 }
 
+/** @internal */
 export function getHasManyNotNestedModels(target: any): string[] {
   const models: string[] = getHasManyModels(target) || [];
 
@@ -37,6 +41,7 @@ export function getHasManyNotNestedModels(target: any): string[] {
   });
 }
 
+/** @internal */
 export function setHasManyDescriptor(
   target: any,
   modelName: string,
@@ -109,6 +114,7 @@ export function hasMany(ChildModel: Constructor, opts?: RelationOptions) {
   };
 }
 
+/** @internal */
 export function transformHasManyAttributes(target: any, item: Record<string, any>) {
   const finalAttributes = _.cloneDeep(item);
 

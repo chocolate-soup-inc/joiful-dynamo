@@ -1,5 +1,5 @@
-import { Entity } from '../src/lib/classes/Entity';
-import { aliases, aliasTo } from '../src/lib/decorators/aliases';
+import { Entity } from '../src/lib/Entity';
+import { aliases, aliasTo } from '../src/lib/Decorators/aliases';
 
 class TestModel extends Entity {
   @aliases(['alias1', 'alias2'])

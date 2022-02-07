@@ -13,22 +13,27 @@ const secondaryKeyMetadataKey = 'secondaryKey';
 const createdAtKeyMetadataKey = 'createdAtKey';
 const updatedAtKeyMetadataKey = 'updatedAtKey';
 
+/** @internal */
 export function getPrimaryKey(target: any): string | undefined {
   return Reflect.getMetadata(primaryKeyMetadataKey, target);
 }
 
+/** @internal */
 export function getSecondaryKey(target: any): string | undefined {
   return Reflect.getMetadata(secondaryKeyMetadataKey, target);
 }
 
+/** @internal */
 export function getCreatedAtKey(target: any): string | undefined {
   return Reflect.getMetadata(createdAtKeyMetadataKey, target);
 }
 
+/** @internal */
 export function getUpdatedAtKey(target: any): string | undefined {
   return Reflect.getMetadata(updatedAtKeyMetadataKey, target);
 }
 
+/** @internal */
 export function setPropDescriptor(target: any, propertyKey: string): void {
   Object.defineProperty(target, propertyKey, {
     get() {
@@ -42,6 +47,7 @@ export function setPropDescriptor(target: any, propertyKey: string): void {
   });
 }
 
+/** @internal */
 export function setPropGettersAndSetters(target: any, propertyKey: string): void {
   // SET THE LIST OF VALIDATED PROPERTIES IN THE INSTANCE
   const properties: string[] = Reflect.getMetadata(propMetadataKey, target) || [];
@@ -117,6 +123,8 @@ export function setPropGettersAndSetters(target: any, propertyKey: string): void
  *
  * model.create(); // In the database it will be saved like this: { property1: 'Model-changed1', property2: 'Model-changed2', cAt: '2022-02-07T16:16:44.975Z', uAt: '2022-02-07T16:16:44.975Z', extraAttribute: 'changed5' };
  * ```
+ *
+ * @category Property Decorators
  */
 export function prop(opts?: PropOptions) {
   return (target: any, propertyKey: string) => {

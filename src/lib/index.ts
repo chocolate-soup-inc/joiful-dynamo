@@ -1,5 +1,5 @@
-export * from './classes/Entity';
-export * from './classes/DynamoPaginator';
+export * from './Entity';
+export * from './Entity/DynamoPaginator';
 export {
   aliasTo,
   aliases,
@@ -9,4 +9,4 @@ export {
   prop,
   table,
   validate,
-} from './decorators/index';
+} from './Decorators/index';

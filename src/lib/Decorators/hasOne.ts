@@ -5,17 +5,21 @@ import { getAliasesMap } from './aliases';
 import { Constructor, RelationModel, RelationOptions } from './decoratorTypes';
 import { setPropGettersAndSetters } from './prop';
 
+/** @internal */
 export const hasOneMetadataKey = 'hasOne';
 const hasOnePropertiesMetadataKey = 'hasOneProperties';
 
+/** @internal */
 export function getHasOneModels(target: any): string[] | undefined {
   return Reflect.getMetadata(hasOneMetadataKey, target);
 }
 
+/** @internal */
 export function getHasOneModel(target: any, propertyKey: string): RelationModel {
   return Reflect.getMetadata(hasOneMetadataKey, target, propertyKey);
 }
 
+/** @internal */
 export function getHasOneNestedModels(target: any): string[] {
   const models: string[] = getHasOneModels(target) || [];
 
@@ -28,6 +32,7 @@ export function getHasOneNestedModels(target: any): string[] {
   });
 }
 
+/** @internal */
 export function getHasOneNotNestedModels(target: any): string[] {
   const models: string[] = getHasOneModels(target) || [];
 
@@ -40,14 +45,17 @@ export function getHasOneNotNestedModels(target: any): string[] {
   });
 }
 
+/** @internal */
 export function getHasOneProperties(target: any): string[] | undefined {
   return Reflect.getMetadata(hasOnePropertiesMetadataKey, target);
 }
 
+/** @internal */
 export function getHasOneProperty(target: any, propertyKey: string): { entity: string, key: string } {
   return Reflect.getMetadata(hasOnePropertiesMetadataKey, target, propertyKey) || {};
 }
 
+/** @internal */
 export function setHasOneDescriptor(target: any, modelName: string, ChildModel: Constructor) {
   const propertyKey = `_${hasOneMetadataKey}_${modelName}`;
 
@@ -81,6 +89,7 @@ export function setHasOneDescriptor(target: any, modelName: string, ChildModel: 
   });
 }
 
+/** @internal */
 export function setHasOnePropertiesDescriptor(target: any, modelName: string, ChildModel: Constructor) {
   const propDescriptors = Object.keys(ChildModel.prototype);
   const aliasDescriptors = Object.keys(getAliasesMap(ChildModel.prototype));
@@ -186,6 +195,8 @@ export function setHasOnePropertiesDescriptor(target: any, modelName: string, Ch
  *
  * parent.create() // This will insert 2 records in the database. The parent and the child 2. Both will have the property fk set to 'ParentModel-1'
  * ```
+ *
+ * @category Property Decorators
  */
 export function hasOne(ChildModel: Constructor, opts?: RelationOptions) {
   return (target: any, propertyKey: string): void => {
@@ -218,6 +229,7 @@ export function hasOne(ChildModel: Constructor, opts?: RelationOptions) {
   };
 }
 
+/** @internal */
 export function transformHasOneAttributes(target: any, item: Record<string, any>) {
   const finalAttributes = _.cloneDeep(item);
 

@@ -1,5 +1,5 @@
-import { Entity } from '../src/lib/classes/Entity';
-import { prop } from '../src/lib/decorators/prop';
+import { Entity } from '../src/lib/Entity';
+import { prop } from '../src/lib/Decorators/prop';
 
 class SimpleModel extends Entity {
   @prop({ primaryKey: true })

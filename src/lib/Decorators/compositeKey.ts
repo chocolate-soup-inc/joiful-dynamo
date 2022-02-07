@@ -8,14 +8,17 @@ type Options = {
   delimiter?: string;
 };
 
+/** @internal */
 export function getCompositeKeys(target: any): string[] {
   return Reflect.getMetadata(compositeMetadataKey, target) || [];
 }
 
+/** @internal */
 export function getCompositeKey(target: any, key: string): string[] | undefined {
   return Reflect.getMetadata(compositeMetadataKey, target, key);
 }
 
+/** @internal */
 export function getCompositeKeyDelimiter(target: any): string {
   return Reflect.getMetadata(delimiterMetadataKey, target) || '#';
 }
@@ -45,7 +48,10 @@ export function getCompositeKeyDelimiter(target: any): string {
  * console.log(model.field2) // 'part2'
  *
  * console.log(model.transformedAttributes) // { compositeProperty: 'part1#part2', field1: 'part1', field2: 'part2' }
+ *
  * ```
+ *
+ * @category Property Decorators
  */
 export function compositeKey(fields: string[], opts?: Options) {
   return (target: any, propertyKey: string): void => {
@@ -97,6 +103,7 @@ export function compositeKey(fields: string[], opts?: Options) {
   };
 }
 
+/** @internal */
 export function transformCompositeKeyAttributes(target: any, item: Record<string, any>) {
   const newItem = _.cloneDeep(item);
   const compositeKeys = getCompositeKeys(target);

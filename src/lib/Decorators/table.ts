@@ -20,6 +20,8 @@ if (isTest || isLocal) {
     secretAccessKey: '123',
   });
 }
+
+/** @internal */
 export const dynamodbDocumentClient = new AWS.DynamoDB.DocumentClient(dynamoOptions);
 
 const tableMetadataKey = Symbol('table');
@@ -42,6 +44,8 @@ type Options = {
  * const model = new Model({ attr1: '1', attr2: '2' });
  * model.create(); // This will create the record in the 'test-table' DynamoDB table.
  * ```
+ *
+ * @category Class Decorators
  */
 export function table(name: string, opts?: Options) {
   return (constructor: Function) => {
@@ -57,14 +61,17 @@ export function table(name: string, opts?: Options) {
   };
 }
 
+/** @internal */
 export const getTableProps = (target: any): { name: string, dynamodb: AWS.DynamoDB.DocumentClient } => {
   return Reflect.getMetadata(tableMetadataKey, target);
 };
 
+/** @internal */
 export const getTableName = (target: any): string => {
   return getTableProps(target).name;
 };
 
+/** @internal */
 export const getTableDynamoDbInstance = (target: any): AWS.DynamoDB.DocumentClient => {
   return getTableProps(target).dynamodb;
 };

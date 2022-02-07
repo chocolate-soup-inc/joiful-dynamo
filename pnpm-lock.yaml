@@ -32,6 +32,7 @@ specifiers:
   ts-jest: ^27.1.2
   ts-node: ^10.4.0
   typedoc: ^0.22.11
+  typedoc-plugin-rename-defaults: ^0.4.0
   typescript: ^4.5.4
 
 dependencies:
@@ -64,6 +65,7 @@ devDependencies:
   ts-jest: 27.1.2_9364f2ad0b7b67f00a4d081c662c6871
   ts-node: 10.4.0_faf01e1d5a40372a98081522dcafc186
   typedoc: 0.22.11_typescript@4.5.4
+  typedoc-plugin-rename-defaults: 0.4.0_typedoc@0.22.11
   typescript: 4.5.4
 
 packages:
@@ -4634,6 +4636,14 @@ packages:
     resolution: {integrity: sha512-zdu8XMNEDepKKR+XYOXAVPtWui0ly0NtohUscw+UmaHiAWT8hrV1rr//H6V+0DvJ3OQ19S979M0laLfX8rm82Q==}
     dependencies:
       is-typedarray: 1.0.0
+    dev: true
+
+  /typedoc-plugin-rename-defaults/0.4.0_typedoc@0.22.11:
+    resolution: {integrity: sha512-7m7MbNZKcxCA4Z+0MW06sFEmuQ+he1xfc+rLRtvvQcQypPTd3fgFmkEJKVu42t8mONC+kKS/WkbmqwzsiqI1YQ==}
+    peerDependencies:
+      typedoc: 0.22.x
+    dependencies:
+      typedoc: 0.22.11_typescript@4.5.4
     dev: true
 
   /typedoc/0.22.11_typescript@4.5.4:

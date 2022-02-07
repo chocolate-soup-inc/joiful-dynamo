@@ -1,7 +1,7 @@
-import { DynamoPaginator } from '../src/lib/classes/DynamoPaginator';
-import { Entity } from '../src/lib/classes/Entity';
-import { prop } from '../src/lib/decorators/prop';
-import { dynamodbDocumentClient, table } from '../src/lib/decorators/table';
+import { DynamoPaginator } from '../src/lib/Entity/DynamoPaginator';
+import { Entity } from '../src/lib/Entity';
+import { prop } from '../src/lib/Decorators/prop';
+import { dynamodbDocumentClient, table } from '../src/lib/Decorators/table';
 
 const tableName = 'test-table';
 

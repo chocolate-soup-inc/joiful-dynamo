@@ -1,8 +1,8 @@
 /* eslint-disable no-await-in-loop */
-import { Entity } from '../src/lib/classes/Entity';
+import { Entity } from '../src/lib/Entity';
 import {
   dynamodbDocumentClient, hasOne, prop, table,
-} from '../src/lib/decorators';
+} from '../src/lib/Decorators';
 
 const tableName = 'test-relations-table';
 

@@ -1,7 +1,7 @@
 /* eslint-disable max-classes-per-file */
 import * as Joi from 'joi';
-import { Entity } from '../src/lib/classes/Entity';
-import { validate } from '../src/lib/decorators/validate';
+import { Entity } from '../src/lib/Entity';
+import { validate } from '../src/lib/Decorators/validate';
 
 class NoValidationModel extends Entity {
   pk: string;
