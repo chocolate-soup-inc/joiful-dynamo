@@ -70,31 +70,52 @@ const instance = new TestModel({
   extraAttribute: 'extra',
 });
 
-const createValid = async () => {
-  await instance.create();
-  /*
-    Data saved to DB:
-    {
-      pk: 'TestModel-1',
-      name: 'test name',
-      extraAttribute: 'extra',
-      _createdAt: '2022-02-07T22:43:30.344Z',
-      _updatedAt: '2022-02-07T22:43:30.344Z',
-      _entityName: 'TestModel',
-    }
-  */
-};
-
-createValid();
+// this should be inside an async function
+await instance.create();
+/*
+  Data saved to DB:
+  {
+    pk: 'TestModel-1',
+    name: 'test name',
+    extraAttribute: 'extra',
+    _createdAt: '2022-02-07T22:43:30.344Z',
+    _updatedAt: '2022-02-07T22:43:30.344Z',
+    _entityName: 'TestModel',
+  }
+*/
 
 
-const invalidInstance = new TestMode({
+const invalidInstance = new TestModel({
   name: 'Name',
 });
 
 console.log(invalidInstance.valid) // false
-
 invalidInstance.create() // Throws error.
+
+
+const dbInstance = await TestModel.getItem({ pk: '1' });
+dbInstance.name = '123'
+dbInstance.update();
+
+
+const scanInstances = await TestModel.scan(); // scanAll also available
+console.log(scanInstances.items) // Array of test instances
+await scanInstances.next() // Load next page
+console.log(scanInstances.items) // Array with ALL test instances
+console.log(scanInstances.lastPageItems) // Array with last page instances
+
+const queryOpts = {
+  IndexName: 'byEntity',
+  KeyConditionExpression: '_entityName = :e',
+  ExpressionAttributeValues: {
+    ':e': 'TestModel',
+  },
+};
+const queryInstances = await TestModel.query(queryOpts); // queryAll also available
+console.log(queryInstances.items) // Array of test instances
+await queryInstances.next() // Load next page
+console.log(queryInstances.items) // Array with ALL test instances
+console.log(queryInstances.lastPageItems) // Array with last page instances
 ```
 
 For more examples and full docs, access [https://chocolate-soup-inc.github.io/joiful-dynamo/](https://chocolate-soup-inc.github.io/joiful-dynamo/).
