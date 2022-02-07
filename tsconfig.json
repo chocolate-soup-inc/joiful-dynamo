@@ -29,5 +29,9 @@
     "emitDecoratorMetadata": true,
   },
   "inlcude": ["src/**/*"],
-  "exclude": ["node_modules/", "dist/", "__tests__/**/*","./*.ts", "./*.js", "./*.json", "jest-dynamodb-config.js", "tsconfig.json"],
+  "exclude": ["node_modules/", "dist/", "__tests__/**/*","./*.ts", "./*.js", "./*.json", "jest-dynamodb-config.js", "tsconfig.json", "./lib/**/*"],
+  "typedocOptions": {
+    "entryPoints": ["./src/lib/index.ts"],
+    "out": "docs"
+  }
 }

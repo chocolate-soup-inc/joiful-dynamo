@@ -1,7 +1,7 @@
 {
   "name": "joiful-dynamodb",
   "version": "1.0.0",
-  "description": "Project to connect Joi and Dynamodb-toolbox into class models.",
+  "description": "Project to interact with Dynamodb having some basic ORM functions.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "scripts": {
@@ -9,7 +9,8 @@
     "test:watch": "jest --cache --colors --detectOpenHandles --forceExit --maxWorkers=3 --watchAll",
     "test:clearCache": "jest --clearCache",
     "build": "rm -rf ./lib/ && tsc",
-    "lint": "eslint --fix . --ext .js,.ts"
+    "lint": "eslint --fix . --ext .js,.ts",
+    "build:docs": "rm -rf ./docs/ && typedoc --theme github-wiki"
   },
   "repository": {
     "type": "git",
@@ -47,6 +48,9 @@
     "prettier": "^2.5.1",
     "ts-jest": "^27.1.2",
     "ts-node": "^10.4.0",
+    "typedoc": "^0.22.11",
+    "typedoc-github-wiki-theme": "^1.0.0",
+    "typedoc-plugin-markdown": "^3.11.13",
     "typescript": "^4.5.4"
   },
   "files": [

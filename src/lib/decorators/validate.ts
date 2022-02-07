@@ -13,6 +13,10 @@ export const getPropertyValidate = (target: any, key: string): Joi.Schema | unde
   return Reflect.getMetadata(validateMetadataKey, target, key);
 };
 
+/**
+ * Adds validation to the decorated property using Joi validation library.
+ * @param {Joi.Schema} joi - The Joi validation schema.
+ */
 export function validate(joi: Joi.Schema) {
   return (target: any, propertyKey: string): void => {
     // ADD THE JOI SCHEMA TO THE METADATA

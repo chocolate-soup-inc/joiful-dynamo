@@ -11,7 +11,7 @@ import {
   getTableName,
   getUpdatedAtKey,
 } from '../decorators';
-import { QueryOptions, ScanOptions } from '../DynamoEntityTypes';
+import { QueryOptions, ScanOptions } from '../utils/DynamoEntityTypes';
 import { BasicEntity } from './BasicEntity';
 import { DynamoPaginator } from './DynamoPaginator';
 

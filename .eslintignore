@@ -3,3 +3,4 @@ node_modules/**/*
 src/index.d.ts
 tsconfig.json
 jest-dynamodb-config.js
+./lib/**/*
