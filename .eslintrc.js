@@ -25,10 +25,23 @@ module.exports = {
     'no-underscore-dangle': 'off',
     'no-param-reassign': 'off',
     'import/prefer-default-export': 'off',
-    '@typescript-eslint/indent': ['error', 2],
     'arrow-body-style': 'off',
     'no-continue': 'off',
     'class-methods-use-this': 'off',
     'max-classes-per-file': 'off',
+    "indent": "off",
+    'max-len': 'off',
+    "@typescript-eslint/indent": [
+      "error",
+      2,
+      {
+        "ignoredNodes": [
+          "FunctionExpression > .params[decorators.length > 0]",
+          "FunctionExpression > .params > :matches(Decorator, :not(:first-child))",
+          "ClassBody.body > PropertyDefinition[decorators.length > 0] > .key"
+        ]
+      }
+    ],
+    // '@typescript-eslint/indent': ['error', 2],
   }
 };

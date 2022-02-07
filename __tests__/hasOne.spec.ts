@@ -10,25 +10,39 @@ class ChildModel extends Entity {
   @prop()
   @aliases(['alias1'])
   @validate(Joi.string().required())
-    pk: string;
+  pk: string;
 
   @prop()
   @validate(Joi.string())
-    sk: string;
+  sk: string;
 }
 
 class TestModel extends Entity {
   @prop()
-    pk: number;
+  pk: number;
 
   @prop()
-    sk: number;
+  sk: number;
 
   @hasOne(ChildModel, { nestedObject: true })
-    childProperty: ChildModel;
+  childProperty: ChildModel;
 
   @hasOne(ChildModel, { required: true, nestedObject: true })
-    child2: ChildModel;
+  child2: ChildModel;
+}
+
+class TestModelWithRelated extends Entity {
+  @prop()
+  pk: number;
+
+  @prop()
+  sk: number;
+
+  @hasOne(ChildModel, { required: false, nestedObject: false })
+  child1: ChildModel;
+
+  @hasOne(ChildModel, { required: true, nestedObject: false })
+  child2: ChildModel;
 }
 
 describe('Has one', () => {
@@ -250,5 +264,119 @@ describe('Has one', () => {
 
     expect(model.valid).toBeFalsy();
     expect(model.error).toBeInstanceOf(Joi.ValidationError);
+  });
+
+  describe('Related models', () => {
+    test('When there is a related model missing it is invalid', () => {
+      const model = new TestModelWithRelated({
+        pk: 1,
+        sk: 2,
+      });
+
+      expect(() => model.validate(true)).toThrowError('"child2" is required');
+      expect(model.valid).toBeFalsy();
+    });
+
+    test('When the required child is present and it is valid, the parent is valid', () => {
+      const model = new TestModelWithRelated({
+        pk: 1,
+        sk: 2,
+        child2: {
+          pk: '1',
+          sk: '2',
+        },
+      });
+
+      expect(model.valid).toBeTruthy();
+    });
+
+    test('When both children are present and are valid, the parent is valid', () => {
+      const model = new TestModelWithRelated({
+        pk: 1,
+        sk: 2,
+        child1: {
+          pk: '1',
+          sk: '2',
+        },
+        child2: {
+          pk: '1',
+          sk: '2',
+        },
+      });
+
+      expect(model.valid).toBeTruthy();
+    });
+
+    test('When both children are present and the required one is invalid, the parent is invalid', () => {
+      const model = new TestModelWithRelated({
+        pk: 1,
+        sk: 2,
+        child1: {
+          pk: '1',
+          sk: '2',
+        },
+        child2: {
+          sk: '2',
+        },
+      });
+
+      expect(model.valid).toBeFalsy();
+      expect(model.error).toBeInstanceOf(Joi.ValidationError);
+    });
+
+    test('When both children are present and the not required one is invalid, the parent is invalid', () => {
+      const model = new TestModelWithRelated({
+        pk: 1,
+        sk: 2,
+        child1: {
+          sk: '2',
+        },
+        child2: {
+          pk: '1',
+          sk: '2',
+        },
+      });
+
+      expect(model.valid).toBeFalsy();
+      expect(model.error).toBeInstanceOf(Joi.ValidationError);
+    });
+
+    test('When both are valid, the attributes does not include the not nested models', () => {
+      const model = new TestModelWithRelated({
+        pk: 1,
+        sk: 2,
+        child1: {
+          pk: '1',
+          sk: '2',
+        },
+        child2: {
+          pk: '1',
+          sk: '2',
+        },
+      });
+
+      expect(model.validatedAttributes).toStrictEqual({
+        pk: 1,
+        sk: 2,
+      });
+    });
+
+    test('When both are invalid, the attributes does not include the not nested models', () => {
+      const model = new TestModelWithRelated({
+        pk: 1,
+        sk: 2,
+        child1: {
+          sk: '2',
+        },
+        child2: {
+          sk: '2',
+        },
+      });
+
+      expect(model.validatedAttributes).toStrictEqual({
+        pk: 1,
+        sk: 2,
+      });
+    });
   });
 });

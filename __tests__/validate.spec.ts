@@ -9,10 +9,10 @@ class NoValidationModel extends Entity {
 
 class TestModel extends Entity {
   @validate(Joi.string().required().trim())
-    pk: string;
+  pk: string;
 
   @validate(Joi.string().required().trim())
-    sk: string;
+  sk: string;
 }
 
 describe('Validation', () => {

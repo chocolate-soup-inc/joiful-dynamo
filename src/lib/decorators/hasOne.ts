@@ -3,8 +3,9 @@ import _ from 'lodash';
 import Joi from 'joi';
 import { getAliasesMap } from './aliases';
 import { Constructor, RelationModel, RelationOptions } from './decoratorTypes';
+import { setPropGettersAndSetters } from './prop';
 
-const hasOneMetadataKey = 'hasOne';
+export const hasOneMetadataKey = 'hasOne';
 const hasOnePropertiesMetadataKey = 'hasOneProperties';
 
 export function getHasOneModels(target: any): string[] | undefined {
@@ -70,6 +71,14 @@ export function setHasOneDescriptor(target: any, modelName: string, ChildModel: 
     enumerable: true,
     configurable: false,
   });
+
+  Object.defineProperty(target, `_noInitializer${_.capitalize(modelName)}`, {
+    get() {
+      return this[propertyKey];
+    },
+    enumerable: false,
+    configurable: false,
+  });
 }
 
 export function setHasOnePropertiesDescriptor(target: any, modelName: string, ChildModel: Constructor) {
@@ -108,6 +117,10 @@ export function hasOne(ChildModel: Constructor, opts?: RelationOptions) {
       opts,
     }, target, propertyKey);
 
+    if (opts?.foreignKey) {
+      setPropGettersAndSetters(target, opts?.foreignKey);
+    }
+
     let models: string[] = Reflect.getMetadata(hasOneMetadataKey, target);
 
     if (models) {
@@ -131,6 +144,7 @@ export function transformHasOneAttributes(target: any, item: Record<string, any>
   const finalAttributes = _.cloneDeep(item);
 
   const nestedModels: string[] = getHasOneNestedModels(target) || [];
+
   for (const model of nestedModels) {
     delete finalAttributes[model];
 

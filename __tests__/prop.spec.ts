@@ -3,24 +3,24 @@ import { prop } from '../src/lib/decorators/prop';
 
 class SimpleModel extends Entity {
   @prop({ primaryKey: true })
-    pk: string;
+  pk: string;
 
   @prop({ secondaryKey: true })
-    sk: string;
+  sk: string;
 
   @prop({ createdAt: true })
-    _cat: string;
+  _cat: string;
 
   @prop({ updatedAt: true })
-    _uat: string;
+  _uat: string;
 }
 
 class NoKeysModel extends Entity {
   @prop()
-    pk: string;
+  pk: string;
 
   @prop()
-    sk: string;
+  sk: string;
 }
 
 describe('Prop', () => {

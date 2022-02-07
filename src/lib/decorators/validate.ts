@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import Joi from 'joi';
-import { getHasOneModel, getHasOneNestedModels } from './hasOne';
-import { getHasManyModel, getHasManyNestedModels } from './hasMany';
+import { getHasOneModel, getHasOneNestedModels, getHasOneNotNestedModels } from './hasOne';
+import { getHasManyModel, getHasManyNestedModels, getHasManyNotNestedModels } from './hasMany';
 
 const validateMetadataKey = Symbol('validate');
 
@@ -34,21 +34,29 @@ export function joiSchema(target: any) {
   const validatedKeys = getValidatedFields(target);
   const joiObject = Joi.object().unknown(true);
 
-  const hasOneModels = getHasOneNestedModels(target);
-  const hasManyModels = getHasManyNestedModels(target);
-  const allModels = hasOneModels.concat(hasManyModels);
+  const hasOneNestedModels = getHasOneNestedModels(target);
+  const hasManyNestedModels = getHasManyNestedModels(target);
+  const allNestedModels = hasOneNestedModels.concat(hasManyNestedModels);
 
+  const hasOneNotNestedModels = getHasOneNotNestedModels(target);
+  const hasManyNotNestedModels = getHasManyNotNestedModels(target);
+  const allNotNestedModels = hasOneNotNestedModels.concat(hasManyNotNestedModels);
+
+  const allModels = allNestedModels.concat(allNotNestedModels);
+
+  // THIS WILL IGNORE ALL THE MODELS (NESTED AND NOT NESTED) FROM THE SCHEMA
   const joiKeys = validatedKeys.reduce((agg, key) => {
     const schema = getPropertyValidate(target, key);
     if (!allModels.includes(key) && schema != null) agg[key] = schema;
     return agg;
   }, {} as Record<string, Joi.Schema>);
 
+  // THIS WILL RE-ADD THE NESTED MODELS TO THE SCHEMA
   [{
-    modelsArray: hasOneModels,
+    modelsArray: hasOneNestedModels,
     getModelFunc: getHasOneModel,
   }, {
-    modelsArray: hasManyModels,
+    modelsArray: hasManyNestedModels,
     getModelFunc: getHasManyModel,
   }].forEach(({ modelsArray, getModelFunc }) => {
     for (const model of modelsArray) {
@@ -67,8 +75,6 @@ export function joiSchema(target: any) {
       }
     }
   });
-
-  // console.log(joiKeys);
 
   if (Object.keys(joiKeys).length > 0) return joiObject.keys(joiKeys);
   return joiObject;

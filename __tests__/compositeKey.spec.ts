@@ -8,48 +8,48 @@ class TestModel extends Entity {
   @prop()
   @validate(Joi.string().required())
   @compositeKey(['field1', 'field2'])
-    composite: string;
+  composite: string;
 
   @prop()
-    field1: string;
+  field1: string;
 
   @prop()
-    field2: string;
+  field2: string;
 }
 
 class TestModelWithDelimiter extends Entity {
   @prop()
   @validate(Joi.string().required())
   @compositeKey(['field1', 'field2'], { delimiter: '---' })
-    composite: string;
+  composite: string;
 
   @prop()
-    field1: string;
+  field1: string;
 
   @prop()
-    field2: string;
+  field2: string;
 }
 
 class TestModelWithNestedComposite extends Entity {
   @prop()
   @compositeKey(['field1', 'field2'])
-    composite0: string;
+  composite0: string;
 
   @compositeKey(['composite0', 'composite2'])
-    composite1: string;
+  composite1: string;
 
   @prop()
   @compositeKey(['composite0', 'field3'])
-    composite2: string;
+  composite2: string;
 
   @prop()
-    field1: string;
+  field1: string;
 
   @prop()
-    field2: string;
+  field2: string;
 
   @prop()
-    field3: string;
+  field3: string;
 }
 
 describe('Composite Keys', () => {

@@ -1,7 +1,11 @@
 import Joi from 'joi';
+import _ from 'lodash';
 import {
   getHasManyModels,
+  getHasManyNotNestedModels,
+  getHasOneModel,
   getHasOneModels,
+  getHasOneNotNestedModels,
   setPropGettersAndSetters,
   transformAliasAttributes,
   transformCompositeKeyAttributes,
@@ -56,7 +60,12 @@ export class BasicEntity {
 
   get enumerableAttributes(): Record<string, any> {
     return Object.keys(this.constructor.prototype).reduce((agg, key) => {
-      const value = this[key];
+      let value;
+      if (this.relatedNotNestedModels.includes(key)) {
+        value = this[`_noInitializer${_.capitalize(key)}`];
+      } else {
+        value = this[key];
+      }
 
       if (value !== undefined) agg[key] = value;
       return agg;
@@ -82,14 +91,57 @@ export class BasicEntity {
 
   // ---------------- BASIC ATTRIBUTES SETTINGS ----------------
 
+  // ---------------- VALIDATION SUPPORT SETTINGS ----------------
+
+  protected get relatedNotNestedModels() {
+    return getHasOneNotNestedModels(this).concat(getHasManyNotNestedModels(this));
+  }
+
+  // ---------------- VALIDATION SUPPORT SETTINGS ----------------
+
   // ---------------- VALIDATION SETTINGS ----------------
 
   protected _error: Joi.ValidationError | undefined;
 
-  validate(_throw: boolean = false) {
+  validateRelatedModels(_throw: boolean = false): boolean {
+    for (const hasOneModel of getHasOneNotNestedModels(this)) {
+      const instance: BasicEntity | undefined = this[`_noInitializer${_.capitalize(hasOneModel)}`];
+
+      if (instance == null) {
+        const {
+          opts: {
+            required = false,
+          } = {},
+        } = getHasOneModel(this, hasOneModel) || {};
+
+        if (required) {
+          const error = new Joi.ValidationError(`"${hasOneModel}" is required.`, this, this.attributes);
+          if (_throw) {
+            throw error;
+          } else {
+            this._error = error;
+            return false;
+          }
+        } else {
+          continue;
+        }
+      }
+
+      const valid = instance.validate(_throw);
+      if (!valid) {
+        this._error = instance.error;
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  validate(_throw: boolean = false): boolean {
     this._error = undefined;
     try {
       validateAttributes(this, this.transformedAttributes);
+      this.validateRelatedModels(true);
       return true;
     } catch (error) {
       if (_throw) {

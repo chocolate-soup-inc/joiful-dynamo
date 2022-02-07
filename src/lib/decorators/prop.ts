@@ -13,10 +13,6 @@ const secondaryKeyMetadataKey = 'secondaryKey';
 const createdAtKeyMetadataKey = 'createdAtKey';
 const updatedAtKeyMetadataKey = 'updatedAtKey';
 
-export function getProps(target: any): string[] {
-  return Reflect.getMetadata(propMetadataKey, target) || [];
-}
-
 export function getPrimaryKey(target: any): string | undefined {
   return Reflect.getMetadata(primaryKeyMetadataKey, target);
 }

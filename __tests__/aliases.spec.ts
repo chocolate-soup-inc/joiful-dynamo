@@ -3,10 +3,10 @@ import { aliases, aliasTo } from '../src/lib/decorators/aliases';
 
 class TestModel extends Entity {
   @aliases(['alias1', 'alias2'])
-    property: string;
+  property: string;
 
   @aliasTo('property')
-    alias3: string;
+  alias3: string;
 }
 
 describe('Aliases Decorator', () => {

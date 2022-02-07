@@ -1,16 +1,14 @@
 /* eslint-disable no-await-in-loop */
 import { Key } from 'aws-sdk/clients/dynamodb';
 
-type Constructor = { new(...args) };
-
-type ConstructorOptions<TBase> = {
+type ConstructorOptions = {
   method: Function;
   opts?: object;
-  entityClass: TBase;
   tableName: string;
+  initializer: (item: Record<string, any>) => any;
 };
 
-export class DynamoPaginator<TBase extends Constructor> {
+export class DynamoPaginator {
   protected _dynamoMethod: Function;
 
   protected _opts: object;
@@ -23,15 +21,15 @@ export class DynamoPaginator<TBase extends Constructor> {
 
   protected _tableName: string;
 
-  protected _entityClass: TBase;
+  protected _initializer: (item: Record<string, any>) => any;
 
   constructor({
-    method, opts, entityClass, tableName,
-  }: ConstructorOptions<TBase>) {
+    method, opts, tableName, initializer,
+  }: ConstructorOptions) {
     this._dynamoMethod = method;
     this._opts = opts || {};
-    this._entityClass = entityClass;
     this._tableName = tableName;
+    this._initializer = initializer;
 
     this[method.name] = this.next;
   }
@@ -45,11 +43,11 @@ export class DynamoPaginator<TBase extends Constructor> {
   }
 
   get lastPageItems() {
-    return this._lastPageItems.map((i) => new this._entityClass(i));
+    return this._lastPageItems.map((i) => this._initializer(i));
   }
 
   get items() {
-    return this._items.map((i) => new this._entityClass(i));
+    return this._items.map((i) => this._initializer(i));
   }
 
   get morePages(): boolean {

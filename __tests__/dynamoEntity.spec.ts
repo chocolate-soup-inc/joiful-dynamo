@@ -3,26 +3,39 @@ import { Entity } from '../src/lib/classes/Entity';
 import { prop } from '../src/lib/decorators/prop';
 import { dynamodbDocumentClient, table } from '../src/lib/decorators/table';
 
-jest.setTimeout(30000);
-
 const tableName = 'test-table';
 
 @table(tableName)
 class TestModel extends Entity {
   @prop({ primaryKey: true })
-    pk: string;
+  pk: string;
 
   @prop({ secondaryKey: true })
-    sk: string;
+  sk: string;
 
   @prop({ createdAt: true })
-    createdAt: string;
+  createdAt: string;
 
   @prop({ updatedAt: true })
-    updatedAt: string;
+  updatedAt: string;
 
   @prop()
-    extraProp: string;
+  extraProp: string;
+}
+
+@table(tableName)
+class OtherModel extends Entity {
+  @prop({ primaryKey: true })
+  pk: string;
+
+  @prop({ secondaryKey: true })
+  sk: string;
+
+  @prop({ createdAt: true })
+  createdAt: string;
+
+  @prop({ updatedAt: true })
+  updatedAt: string;
 }
 
 describe('Dynamo Entity', () => {
@@ -51,15 +64,17 @@ describe('Dynamo Entity', () => {
               [tableName]: [{
                 PutRequest: {
                   Item: {
-                    pk: 'scan-1',
-                    sk: 'scan-2',
+                    pk: 'TestModel-scan-1',
+                    sk: 'TestModel-scan-2',
+                    _entityName: 'TestModel',
                   },
                 },
               }, {
                 PutRequest: {
                   Item: {
-                    pk: 'scan-3',
-                    sk: 'scan-4',
+                    pk: 'TestModel-scan-3',
+                    sk: 'TestModel-scan-4',
+                    _entityName: 'TestModel',
                   },
                 },
               }],
@@ -128,6 +143,14 @@ describe('Dynamo Entity', () => {
             await response.next();
           }).rejects.toThrowError('All pages were already scanned');
         });
+
+        test('Scan only returns the items of the correct model', async () => {
+          const { items: testModelItems } = await TestModel.scanAll();
+          const { items: otherModelItems } = await OtherModel.scanAll();
+
+          expect(testModelItems).toHaveLength(2);
+          expect(otherModelItems).toHaveLength(0);
+        });
       });
     });
 
@@ -136,7 +159,7 @@ describe('Dynamo Entity', () => {
         IndexName: 'bySK',
         KeyConditionExpression: 'sk = :v',
         ExpressionAttributeValues: {
-          ':v': 'query-2',
+          ':v': 'TestModel-query-2',
         },
       };
 
@@ -163,22 +186,25 @@ describe('Dynamo Entity', () => {
               [tableName]: [{
                 PutRequest: {
                   Item: {
-                    pk: 'query-1',
-                    sk: 'query-2',
+                    pk: 'TestModel-query-1',
+                    sk: 'TestModel-query-2',
+                    _entityName: 'TestModel',
                   },
                 },
               }, {
                 PutRequest: {
                   Item: {
-                    pk: 'query-3',
-                    sk: 'query-2',
+                    pk: 'TestModel-query-3',
+                    sk: 'TestModel-query-2',
+                    _entityName: 'TestModel',
                   },
                 },
               }, {
                 PutRequest: {
                   Item: {
-                    pk: 'query-4',
-                    sk: 'query-5',
+                    pk: 'TestModel-query-4',
+                    sk: 'TestModel-query-5',
+                    _entityName: 'TestModel',
                   },
                 },
               }],
@@ -248,6 +274,14 @@ describe('Dynamo Entity', () => {
             await response.next();
           }).rejects.toThrowError('All pages were already scanned');
         });
+
+        test('Query only returns the items of the correct model', async () => {
+          const { items: testModelItems } = await TestModel.queryAll(queryOptions);
+          const { items: otherModelItems } = await OtherModel.queryAll(queryOptions);
+
+          expect(testModelItems).toHaveLength(2);
+          expect(otherModelItems).toHaveLength(0);
+        });
       });
     });
 
@@ -267,15 +301,15 @@ describe('Dynamo Entity', () => {
               [tableName]: [{
                 PutRequest: {
                   Item: {
-                    pk: 'get-1',
-                    sk: 'get-2',
+                    pk: 'TestModel-get-1',
+                    sk: 'TestModel-get-2',
                   },
                 },
               }, {
                 PutRequest: {
                   Item: {
-                    pk: 'get-3',
-                    sk: 'get-4',
+                    pk: 'TestModel-get-3',
+                    sk: 'TestModel-get-4',
                   },
                 },
               }],
@@ -303,6 +337,21 @@ describe('Dynamo Entity', () => {
             });
           }).rejects.toThrowError('The number of conditions on the keys is invalid');
         });
+
+        test('It should only return items of the correct model', async () => {
+          const testModelResponse = await TestModel.getItem({
+            pk: 'get-1',
+            sk: 'get-2',
+          });
+
+          const otherModelResponse = await OtherModel.getItem({
+            pk: 'get-1',
+            sk: 'get-2',
+          });
+
+          expect(testModelResponse).toBeInstanceOf(TestModel);
+          expect(otherModelResponse).toBeUndefined();
+        });
       });
     });
 
@@ -313,7 +362,7 @@ describe('Dynamo Entity', () => {
             pk: 'delete-1',
             sk: 'delete-2',
           });
-        }).rejects.toThrowError('Item does not exist.');
+        }).rejects.toThrowError('The conditional request failed');
       });
 
       describe('When there is some data registered', () => {
@@ -323,15 +372,17 @@ describe('Dynamo Entity', () => {
               [tableName]: [{
                 PutRequest: {
                   Item: {
-                    pk: 'delete-1',
-                    sk: 'delete-2',
+                    pk: 'TestModel-delete-1',
+                    sk: 'TestModel-delete-2',
+                    _entityName: 'TestModel',
                   },
                 },
               }, {
                 PutRequest: {
                   Item: {
-                    pk: 'delete-3',
-                    sk: 'delete-4',
+                    pk: 'TestModel-delete-3',
+                    sk: 'TestModel-delete-4',
+                    _entityName: 'TestModel',
                   },
                 },
               }],
@@ -346,8 +397,9 @@ describe('Dynamo Entity', () => {
           });
 
           expect(response).toEqual({
-            pk: 'delete-1',
-            sk: 'delete-2',
+            pk: 'TestModel-delete-1',
+            sk: 'TestModel-delete-2',
+            _entityName: 'TestModel',
           });
         });
 
@@ -355,7 +407,7 @@ describe('Dynamo Entity', () => {
           const scanOptions = {
             FilterExpression: 'begins_with(pk, :v)',
             ExpressionAttributeValues: {
-              ':v': 'delete',
+              ':v': 'TestModel-delete',
             },
           };
           const { items: beforeDeleteItems } = await TestModel.scanAll(scanOptions);
@@ -366,6 +418,18 @@ describe('Dynamo Entity', () => {
           });
           const { items: afterDeleteItems } = await TestModel.scanAll(scanOptions);
           expect(afterDeleteItems).toHaveLength(1);
+        });
+
+        test('It should delete only from the correct model', async () => {
+          await expect(() => OtherModel.deleteItem({
+            pk: 'delete-3',
+            sk: 'delete-4',
+          })).rejects.toThrowError('The conditional request failed');
+
+          await expect(() => TestModel.deleteItem({
+            pk: 'delete-3',
+            sk: 'delete-4',
+          })).not.toThrowError('The conditional request failed');
         });
       });
     });
@@ -387,17 +451,19 @@ describe('Dynamo Entity', () => {
               [tableName]: [{
                 PutRequest: {
                   Item: {
-                    pk: 'load-1',
-                    sk: 'load-2',
+                    pk: 'TestModel-load-1',
+                    sk: 'TestModel-load-2',
                     extraProp: 'database-extra-1',
+                    _entityName: 'TestModel',
                   },
                 },
               }, {
                 PutRequest: {
                   Item: {
-                    pk: 'load-3',
-                    sk: 'load-4',
+                    pk: 'TestModel-load-3',
+                    sk: 'TestModel-load-4',
                     extraProp: 'database-extra-2',
+                    _entityName: 'TestModel',
                   },
                 },
               }],
@@ -416,6 +482,15 @@ describe('Dynamo Entity', () => {
           await instance.load();
 
           expect(instance.extraProp).toEqual('database-extra-1');
+        });
+
+        test('It should not load if using the wrong model', async () => {
+          const instance = new OtherModel({
+            pk: 'load-1',
+            sk: 'load-2',
+          });
+
+          await expect(instance.load).rejects.toThrowError('Record not found.');
         });
       });
     });
@@ -436,11 +511,12 @@ describe('Dynamo Entity', () => {
               [tableName]: [{
                 PutRequest: {
                   Item: {
-                    pk: 'create-1',
-                    sk: 'create-2',
+                    pk: 'TestModel-create-1',
+                    sk: 'TestModel-create-2',
                     createdAt: now,
                     updatedAt: now,
                     extraAttribute: 1,
+                    _entityName: 'TestModel',
                   },
                 },
               }],
@@ -506,7 +582,7 @@ describe('Dynamo Entity', () => {
           const scanOptions = {
             FilterExpression: 'begins_with(pk, :v)',
             ExpressionAttributeValues: {
-              ':v': 'create',
+              ':v': 'TestModel-create',
             },
           };
           let scanResult = await TestModel.scanAll(scanOptions);
@@ -540,6 +616,23 @@ describe('Dynamo Entity', () => {
           expect(instance.sk).toEqual('create-3');
           expect(instance.createdAt).not.toBeUndefined();
           expect(instance.updatedAt).not.toBeUndefined();
+
+          const response = await dynamodbDocumentClient.get({
+            TableName: tableName,
+            Key: {
+              pk: 'TestModel-create-1',
+              sk: 'TestModel-create-3',
+            },
+          }).promise();
+
+          // IT CORRECTLY SETS ALL THE ATTRIBUTES
+          expect(response.Item).toStrictEqual({
+            pk: 'TestModel-create-1',
+            sk: 'TestModel-create-3',
+            _entityName: 'TestModel',
+            createdAt: instance.createdAt,
+            updatedAt: instance.updatedAt,
+          });
         });
       });
     });
@@ -560,11 +653,12 @@ describe('Dynamo Entity', () => {
               [tableName]: [{
                 PutRequest: {
                   Item: {
-                    pk: 'update-1',
-                    sk: 'update-2',
+                    pk: 'TestModel-update-1',
+                    sk: 'TestModel-update-2',
                     createdAt: now,
                     updatedAt: now,
                     extraAttribute: 1,
+                    _entityName: 'TestModel',
                   },
                 },
               }],
@@ -576,7 +670,7 @@ describe('Dynamo Entity', () => {
           const scanOptions = {
             FilterExpression: 'begins_with(pk, :v)',
             ExpressionAttributeValues: {
-              ':v': 'update',
+              ':v': 'TestModel-update',
             },
           };
           let scanResult = await TestModel.scanAll(scanOptions);
@@ -649,7 +743,7 @@ describe('Dynamo Entity', () => {
           const scanOptions = {
             FilterExpression: 'begins_with(pk, :v)',
             ExpressionAttributeValues: {
-              ':v': 'update',
+              ':v': 'TestModel-update',
             },
           };
           let scanResult = await TestModel.scanAll(scanOptions);

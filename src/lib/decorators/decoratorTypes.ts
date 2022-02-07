@@ -1,8 +1,9 @@
 export type Constructor = { new(...args: any[]) };
 
 export type RelationOptions = {
-  required?: boolean,
+  required?: boolean;
   nestedObject?: boolean;
+  foreignKey?: string;
 };
 
 export type RelationModel = {
