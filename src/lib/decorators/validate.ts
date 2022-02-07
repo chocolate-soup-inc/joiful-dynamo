@@ -16,6 +16,31 @@ export const getPropertyValidate = (target: any, key: string): Joi.Schema | unde
 /**
  * Adds validation to the decorated property using Joi validation library.
  * @param {Joi.Schema} joi - The Joi validation schema.
+ * @example
+ * ```
+ * import * as Joi from 'joi';
+ *
+ * class Model extends Entity {
+ *   @validate(Joi.string().required().trim())
+ *   pk: string;
+ *
+ *   @validate(Joi.string().trim())
+ *   sk: string;
+ * }
+ *
+ * const model = new Model({ pk: '1' });
+ *
+ * console.log(model.valid) // true
+ *
+ * model.sk = '2'
+ * console.log(model.valid) // true
+ *
+ * model.pk = undefined;
+ * console.log(model.valid) // false
+ *
+ * model.pk = '   1 2   ';
+ * console.log(model.validatedAttributes) // { pk: '1 2', sk: '2' } # The joi transfromation happens when validating but doesn't change the original attributes. But the transformed attributes are the ones used on save.
+ * ```
  */
 export function validate(joi: Joi.Schema) {
   return (target: any, propertyKey: string): void => {
