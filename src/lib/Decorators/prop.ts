@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 
-type PropOptions = {
+export type PropOptions = {
   primaryKey?: boolean;
   secondaryKey?: boolean;
   createdAt?: boolean;

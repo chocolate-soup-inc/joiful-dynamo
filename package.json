@@ -18,7 +18,7 @@
     "url": "git+ssh://git@github.com/chocolate-soup-inc/joiful-dynamo.git"
   },
   "author": "Chocolate Soup",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/chocolate-soup-inc/joiful-dynamo/issues"
   },

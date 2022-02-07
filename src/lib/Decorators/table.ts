@@ -26,7 +26,7 @@ export const dynamodbDocumentClient = new AWS.DynamoDB.DocumentClient(dynamoOpti
 
 const tableMetadataKey = Symbol('table');
 
-type Options = {
+export type TableOptions = {
   documentClient?: AWS.DynamoDB.DocumentClient;
 };
 
@@ -47,7 +47,7 @@ type Options = {
  *
  * @category Class Decorators
  */
-export function table(name: string, opts?: Options) {
+export function table(name: string, opts?: TableOptions) {
   return (constructor: Function) => {
     // CONSTRUCTOR IS ACTUALLY THE CLASS ITSELF
     if (name == null) throw new TypeError('Name is required in the table decorator');

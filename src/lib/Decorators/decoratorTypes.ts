@@ -1,7 +1,5 @@
-/** @internal */
 export type Constructor = { new(...args: any[]) };
 
-/** @internal */
 export type RelationOptions = {
   required?: boolean;
   nestedObject?: boolean;

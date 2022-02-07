@@ -4,7 +4,10 @@ import 'reflect-metadata';
 const compositeMetadataKey = Symbol('compositeKey');
 const delimiterMetadataKey = Symbol('delimiter');
 
-type Options = {
+/**
+ * Options for the compositeKey decorator.
+ */
+export type CompositeKeyOptions = {
   delimiter?: string;
 };
 
@@ -26,7 +29,7 @@ export function getCompositeKeyDelimiter(target: any): string {
 /**
  * Transforms the decoratored property into a combination of other properties separated by a specific delimiter.
  * @param {string[]} fields - An ordered list containing the name of the properties to be combined. The combination will be done in this order.
- * @param {Object} [opts = { delimiter: '#' }] - The options object. Currently, it only supports the delimiter parameter.
+ * @param {CompositeKeyOptions} [opts = { delimiter: '#' }] - The options object. Currently, it only supports the delimiter parameter.
  * @param {string} [opts.delimiter = '#'] - A string defining the delimiter to be used when combining the properties.
  * @example
  * ```
@@ -53,7 +56,7 @@ export function getCompositeKeyDelimiter(target: any): string {
  *
  * @category Property Decorators
  */
-export function compositeKey(fields: string[], opts?: Options) {
+export function compositeKey(fields: string[], opts?: CompositeKeyOptions) {
   return (target: any, propertyKey: string): void => {
     Reflect.defineMetadata(
       delimiterMetadataKey,
