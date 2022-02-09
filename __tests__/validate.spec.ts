@@ -7,12 +7,19 @@ class NoValidationModel extends Entity {
   pk: string;
 }
 
+@validate(Joi.object().unknown(true).and('attribute1', 'attribute2'))
 class TestModel extends Entity {
   @validate(Joi.string().required().trim())
   pk: string;
 
   @validate(Joi.string().required().trim())
   sk: string;
+
+  @validate(Joi.string())
+  attribute1: string;
+
+  @validate(Joi.string())
+  attribute2: string;
 }
 
 describe('Validation', () => {
@@ -126,6 +133,46 @@ describe('Validation', () => {
       test('should throw both errors on static validade method', () => {
         expect(() => TestModel.validate({})).toThrow('"pk" is required. "sk" is required');
       });
+    });
+  });
+
+  describe('Entity level validations', () => {
+    const validParams = {
+      pk: '1',
+      sk: '2',
+    };
+
+    test('It should be valid when attribute1 and attribute2 are undefined', () => {
+      const model = new TestModel(validParams);
+      expect(model.valid).toBeTruthy();
+    });
+
+    test('It is not valid when only attribute1 is present', () => {
+      const model = new TestModel({
+        ...validParams,
+        attribute1: '1',
+      });
+
+      expect(model.valid).toBeFalsy();
+    });
+
+    test('It is not valid when only attribute2 is present', () => {
+      const model = new TestModel({
+        ...validParams,
+        attribute2: '2',
+      });
+
+      expect(model.valid).toBeFalsy();
+    });
+
+    test('It is valid when both attribute1 and attribute2 are present', () => {
+      const model = new TestModel({
+        ...validParams,
+        attribute1: '1',
+        attribute2: '2',
+      });
+
+      expect(model.valid).toBeTruthy();
     });
   });
 });

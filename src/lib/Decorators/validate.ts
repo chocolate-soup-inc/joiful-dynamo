@@ -3,7 +3,8 @@ import Joi from 'joi';
 import { getHasOneModel, getHasOneNestedModels, getHasOneNotNestedModels } from './hasOne';
 import { getHasManyModel, getHasManyNestedModels, getHasManyNotNestedModels } from './hasMany';
 
-const validateMetadataKey = Symbol('validate');
+const validateMetadataKey = 'validate';
+const objectValidateMetadataKey = 'objectValidate';
 
 /** @internal */
 export const getValidatedFields = (target: any): string[] => {
@@ -16,18 +17,28 @@ export const getPropertyValidate = (target: any, key: string): Joi.Schema | unde
 };
 
 /**
- * Adds validation to the decorated property using Joi validation library.
+ * Adds validation to the decorated property or decorated Entity using Joi validation library.
  * @param {Joi.Schema} joi - The Joi validation schema.
+ * @remarks
+ *
+ * If you are setting the decorated Entity it NEEDS to be of Joi.object() type. Remember that if you set a new validation object in the Entitiy itself you need to add the .unknown(true) if you want to accept any attribute.
  * @example
  * ```
  * import * as Joi from 'joi';
  *
+ * @validate(Joi.object().unknown(true).and('attribute1', 'attribute2'))
  * class Model extends Entity {
  *   @validate(Joi.string().required().trim())
  *   pk: string;
  *
  *   @validate(Joi.string().trim())
  *   sk: string;
+ *
+ *   @validate(Joi.string())
+ *   attribute1: string;
+ *
+ *   @validate(Joi.string())
+ *   attribute2: string;
  * }
  *
  * const model = new Model({ pk: '1' });
@@ -42,23 +53,35 @@ export const getPropertyValidate = (target: any, key: string): Joi.Schema | unde
  *
  * model.pk = '   1 2   ';
  * console.log(model.validatedAttributes) // { pk: '1 2', sk: '2' } # The joi transfromation happens when validating but doesn't change the original attributes. But the transformed attributes are the ones used on save.
+ *
+ * model.attribute1 = '1'
+ * console.log(model.valid) // false # It is invalid because of the entity level validation with the Joi.object().and()
+ *
+ * model.attribute2 = '2'
+ * console.log(model.valid) // true # It is now valid because it passes the Joi.object().and() validation.
  * ```
  *
  * @category Property Decorators
  */
 export function validate(joi: Joi.Schema) {
-  return (target: any, propertyKey: string): void => {
-    // ADD THE JOI SCHEMA TO THE METADATA
-    Reflect.defineMetadata(validateMetadataKey, joi, target, propertyKey);
+  return (target: any, propertyKey?: string): void => {
+    if (propertyKey) {
+      // ADD THE JOI SCHEMA TO THE METADATA
+      Reflect.defineMetadata(validateMetadataKey, joi, target, propertyKey);
 
-    // SET THE LIST OF VALIDATED PROPERTIES IN THE INSTANCE
-    let properties: string[] = Reflect.getMetadata(validateMetadataKey, target);
+      // SET THE LIST OF VALIDATED PROPERTIES IN THE INSTANCE
+      let properties: string[] = Reflect.getMetadata(validateMetadataKey, target);
 
-    if (properties) {
-      properties.push(propertyKey);
+      if (properties) {
+        properties.push(propertyKey);
+      } else {
+        properties = [propertyKey];
+        Reflect.defineMetadata(validateMetadataKey, properties, target);
+      }
+    } else if (joi.describe().type === 'object') {
+      Reflect.defineMetadata(objectValidateMetadataKey, joi, target.prototype);
     } else {
-      properties = [propertyKey];
-      Reflect.defineMetadata(validateMetadataKey, properties, target);
+      throw new Error('Entity validate should always be a Joi.object()');
     }
   };
 }
@@ -66,7 +89,7 @@ export function validate(joi: Joi.Schema) {
 /** @internal */
 export function joiSchema(target: any) {
   const validatedKeys = getValidatedFields(target);
-  const joiObject = Joi.object().unknown(true);
+  const joiObject = Reflect.getMetadata(objectValidateMetadataKey, target) || Joi.object().unknown(true);
 
   const hasOneNestedModels = getHasOneNestedModels(target);
   const hasManyNestedModels = getHasManyNestedModels(target);
