@@ -2,10 +2,16 @@ import 'reflect-metadata';
 import _ from 'lodash';
 import Joi from 'joi';
 import { getAliasesMap } from './aliases';
-import { Constructor, RelationModel, RelationOptions } from './decoratorTypes';
+import {
+  Constructor,
+  relationDescriptor,
+  RelationDescriptors,
+  RelationModel,
+  HasRelationOptions,
+} from './relationHelpers';
 import { setPropGettersAndSetters } from './prop';
+import { setBelongsTo } from './belongsTo';
 
-/** @internal */
 const hasOneMetadataKey = 'hasOne';
 const hasOnePropertiesMetadataKey = 'hasOneProperties';
 
@@ -129,9 +135,12 @@ export function setHasOnePropertiesDescriptor(target: any, modelName: string, Ch
  * @param {boolean} [opts.required] - If set to true, the validation method will check if the child is undefined, and if it is will throw a ValidationError.
  * @param {boolean} [opts.nestedObject] - If set to true, the attributes will be nested to the parent model. If set to false, the child model will be another record in the database, meaning that when you save the parent model, the child model gets saved as a separate record in the database.
  * @param {string} [opts.foreignKey] - The foreign key property from the child. If this variable is set, the child property will be set to the parent model entity type + its id. It will also set the parent with this same column and value, helping future index queries.
+ * @param {string} [opts.indexName] - If the foreign key is set, this indexName is used by some methods to query the relations.
+ * @param {string} [opts.parentPropertyOnChild] - Set a reference in the child so it can access the parent correctly. Right now, this is only set in load / getItem with includedRelated set. - Needs improvements to be set everywhere. Also, validations do not apply for parents.
  * @remarks
  *
- * Besides validations and setting the child instance, it also creates getters and setters for all child instances in the parent. Look example for more details.
+ * - Besides validations and setting the child instance, it also creates getters and setters for all child instances in the parent. Look example for more details.
+ * - When the hasOne is set on the parent with a foreignKey AND indexName, automatically, when querying the child with related records, it will bring the parent record too.
  * @example
  * ```
  * import * as Joi from 'joi';
@@ -202,13 +211,23 @@ export function setHasOnePropertiesDescriptor(target: any, modelName: string, Ch
  *
  * @category Property Decorators
  */
-export function hasOne(ChildModel: Constructor, opts?: RelationOptions) {
+export function hasOne(ChildModel: Constructor, opts?: HasRelationOptions) {
   return (target: any, propertyKey: string): void => {
-    // SET THE LIST OF MODELS
     Reflect.defineMetadata(hasOneMetadataKey, {
       model: ChildModel,
       opts,
     }, target, propertyKey);
+
+    const modelProperties: RelationDescriptors = Reflect.getMetadata(relationDescriptor, target) || [];
+
+    modelProperties.push({
+      model: ChildModel,
+      opts,
+      propertyKey,
+      type: 'hasOne',
+    });
+
+    Reflect.defineMetadata(relationDescriptor, modelProperties, target);
 
     if (opts?.foreignKey) {
       setPropGettersAndSetters(target, opts?.foreignKey);
@@ -227,6 +246,8 @@ export function hasOne(ChildModel: Constructor, opts?: RelationOptions) {
       models,
       target,
     );
+
+    setBelongsTo(target, ChildModel, propertyKey, 'hasOne', opts);
 
     setHasOneDescriptor(target, propertyKey, ChildModel);
     setHasOnePropertiesDescriptor(target, propertyKey, ChildModel);

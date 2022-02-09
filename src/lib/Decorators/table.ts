@@ -7,10 +7,10 @@ const isLocal = process.env.IS_LOCAL;
 const dynamoOptions: AWS.DynamoDB.DocumentClient.DocumentClientOptions & AWS.DynamoDB.Types.ClientConfiguration = {};
 
 if (isTest || isLocal) {
-  if (process.env.JEST_WORKER_ID) {
-    dynamoOptions.endpoint = 'http://localhost:4567';
-  } else if (process.env.IS_LOCAL) {
-    dynamoOptions.endpoint = 'http://localhost:3456';
+  if (isTest) {
+    dynamoOptions.endpoint = `http://localhost:${process.env.JEST_DYNAMODB_PORT || '4567'}`;
+  } else if (isLocal) {
+    dynamoOptions.endpoint = `http://localhost:${process.env.LOCAL_DYNAMODB_PORT || '3456'}`;
   }
 
   dynamoOptions.sslEnabled = false;

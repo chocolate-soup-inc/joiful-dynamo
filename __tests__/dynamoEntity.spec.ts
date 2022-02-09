@@ -1,3 +1,4 @@
+/* eslint-disable no-await-in-loop */
 import { DynamoPaginator } from '../src/lib/Entity/DynamoPaginator';
 import { Entity } from '../src/lib/Entity';
 import { prop } from '../src/lib/Decorators/prop';
@@ -303,6 +304,7 @@ describe('Dynamo Entity', () => {
                   Item: {
                     pk: 'TestModel-get-1',
                     sk: 'TestModel-get-2',
+                    _entityName: 'TestModel',
                   },
                 },
               }, {
@@ -310,6 +312,7 @@ describe('Dynamo Entity', () => {
                   Item: {
                     pk: 'TestModel-get-3',
                     sk: 'TestModel-get-4',
+                    _entityName: 'TestModel',
                   },
                 },
               }],

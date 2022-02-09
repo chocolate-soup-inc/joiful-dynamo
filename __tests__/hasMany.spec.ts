@@ -27,7 +27,7 @@ class TestModel extends Entity {
   @hasMany(ChildModel, { nestedObject: true })
   childrenProperty: ChildModel[];
 
-  @hasMany(ChildModel, { required: true, nestedObject: true })
+  @hasMany(ChildModel, { required: true, nestedObject: true, parentPropertyOnChild: 'parent' })
   requiredChildren: ChildModel[];
 }
 
@@ -49,6 +49,22 @@ describe('Has many', () => {
   test('should set the children correctly', () => {
     const model = new TestModel({ pk: 1, sk: 2 });
     expect(model.childrenProperty).toEqual([]);
+  });
+
+  test('should let children properties be set by apssing an array of instances', () => {
+    const model = new TestModel({ pk: 1, sk: 2 });
+    expect(model.childrenProperty).toEqual([]);
+    model.childrenProperty = [new ChildModel({
+      pk: 'child-1',
+      sk: 'child-1',
+    }), new ChildModel({
+      pk: 'child-2',
+      sk: 'child-2',
+    })];
+
+    expect(model.childrenProperty).toHaveLength(2);
+    expect(model.childrenProperty[0]).toBeInstanceOf(ChildModel);
+    expect(model.childrenProperty[1]).toBeInstanceOf(ChildModel);
   });
 
   test('should let children properties to be initialized', () => {
@@ -213,7 +229,7 @@ describe('Has many', () => {
     })).toThrowError('"childrenProperty[0].pk" is required');
   });
 
-  test('it validates a required hasOne on the static method', () => {
+  test('it validates a required hasMany on the static method', () => {
     expect(() => TestModel.validate({
       pk: 1,
       sk: 2,
@@ -349,6 +365,13 @@ describe('Has many', () => {
         pk: 1,
         sk: 2,
       });
+    });
+  });
+
+  describe('Belongs To', () => {
+    test('It correctly sets the getters and setters of the child', () => {
+      const child = new ChildModel();
+      expect(child.parent).toBeInstanceOf(TestModel);
     });
   });
 });

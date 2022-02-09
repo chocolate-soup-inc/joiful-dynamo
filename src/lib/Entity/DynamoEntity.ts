@@ -7,11 +7,13 @@ import {
   getHasOneModel,
   getHasOneNotNestedModels,
   getPrimaryKey,
+  getRelationDescriptors,
   getSecondaryKey,
   getTableDynamoDbInstance,
   getTableName,
   getUpdatedAtKey,
 } from '../Decorators';
+import { getBelongsToModel, getBelongsToModels, getHasFromBelong } from '../Decorators/belongsTo';
 import { QueryOptions, ScanOptions } from '../utils/DynamoEntityTypes';
 import { BasicEntity } from './BasicEntity';
 import { DynamoPaginator } from './DynamoPaginator';
@@ -81,7 +83,22 @@ export class DynamoEntity extends BasicEntity {
   // ---------------- TABLE SUPPORT METHODS ----------------
 
   protected static initialize(item: Record<string, any>) {
-    return new this(this.prototype.parseDynamoAttributes(item));
+    // console.log(this, item._entityName, this._entityName);
+    if (item._entityName === this._entityName) {
+      return new this(this.prototype.parseDynamoAttributes(item));
+    }
+
+    for (const relationDescriptor of getRelationDescriptors(this.prototype)) {
+      const {
+        model: ModelClass,
+      } = relationDescriptor;
+
+      if (item._entityName === ModelClass.name) {
+        return new ModelClass(ModelClass.prototype.parseDynamoAttributes(item));
+      }
+    }
+
+    throw new Error('Queried a non recognized entity');
   }
 
   protected static createPaginator(method, opts) {
@@ -152,6 +169,40 @@ export class DynamoEntity extends BasicEntity {
 
   protected static _query(opts: AWS.DynamoDB.QueryInput) {
     return this._dynamodb.query(this.prepareOptsForScanAndQuery(opts)).promise();
+  }
+
+  protected static _queryWithChildrenRecords(opts: AWS.DynamoDB.QueryInput) {
+    const {
+      opts: newOpts,
+      attributeName,
+      attributeValue,
+    } = this.prepareEntityAttributeNameAndValue(opts);
+
+    const attributeValues: string[] = [attributeValue];
+
+    for (const relationDescriptor of getRelationDescriptors(this.prototype)) {
+      const {
+        opts: descriptorOpts,
+        model: ModelClass,
+        propertyKey: relationName,
+      } = relationDescriptor;
+
+      if (descriptorOpts?.indexName === opts.IndexName) {
+        const key = `:_relationDescriptor_${relationName}`;
+        newOpts.ExpressionAttributeValues[key] = ModelClass.name;
+        attributeValues.push(key);
+      }
+    }
+
+    const customFilter = `${attributeName} in (${attributeValues.join(', ')})`;
+
+    if (newOpts?.FilterExpression) {
+      newOpts.FilterExpression = `${newOpts.FilterExpression} and ${customFilter}`;
+    } else {
+      newOpts.FilterExpression = customFilter;
+    }
+
+    return this._dynamodb.query(newOpts).promise();
   }
 
   protected static _scan(opts: AWS.DynamoDB.ScanInput) {
@@ -262,6 +313,7 @@ export class DynamoEntity extends BasicEntity {
   /**
    * Retrieve an item with the specified key from the database using the <a target="_blank" href="https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/DynamoDB/DocumentClient.html#get-property">aws-sdk documentclient get method</a>.
    * @param {AWS.DynamoDB.DocumentClient.Key} key - This argument should be the key before preparing it to save to the database. See example for more details.
+   * @param {boolean} [includeRelated = false] - If this argument is true, the related children will be included. This will only work for children with a foreign key and index set. For each children group (hasOne or hasMany) a query on the foreign key index will be made.
    * @remarks
    * &nbsp;
    * - The model primary key and secondary key are automatically converted to the pattern of how data is saved to the database.
@@ -281,12 +333,14 @@ export class DynamoEntity extends BasicEntity {
    * ```
    */
   static async getItem(key: AWS.DynamoDB.DocumentClient.Key, includeRelated = false) {
-    const {
-      Item: item,
-    } = await this._dynamodb.get({
+    const response = await this._dynamodb.get({
       TableName: this._tableName,
       Key: this.setEntityOnKey(key),
     }).promise();
+
+    const {
+      Item: item,
+    } = response;
 
     if (item) {
       const instance = this.initialize(item);
@@ -336,11 +390,65 @@ export class DynamoEntity extends BasicEntity {
   }
 
   /**
+   * Queries the database using the <a target="_blank" href="https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/DynamoDB/DocumentClient.html#query-property">aws-sdk documentclient query method</a>.
+   * @param {QueryOptions} opts - A list of options to be used by the query method. Similar to do the options from <a target="_blank" href="https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/DynamoDB/DocumentClient.html#query-property">aws-sdk documentclient query metod]</a>
+   * @returns {DynamoPaginator} - A paginator instance.
+   * @remarks
+   * &nbsp;
+   * - It automatically filter the results to return only the ones matching the current class entity, and all the children records who are related to the current class through the same index being used with a condition expression.
+   * - The children are not initialized in the parent model (this could be done through an improvement to the library, but is not implemented yet.)
+   * @example
+   * ```
+   * class Model extends Entity {
+   *   @prop({ primaryKey: true });
+   *   pk: string;
+   *
+   *   @prop({ secondaryKey: true });
+   *   sk: string;
+   *
+   *   @hasMany(HasManyChild, { nestedObject: false, foreignKey: 'fk', indexName: 'byFK' })
+   *   children: HasManyChild[]
+   *
+   *   @hasOne(HasOneChild, { nestedObject: false, foreignKey: 'fk2', indexName: 'byFK2' })
+   *   child: HasOneChild
+   * }
+   *
+   * const paginator = await Model.queryWithChildrenRecords({
+   *   IndexName: 'byFK',
+   *   KeyConditionExpression: 'fk = :v',
+   *   ExpressionAttributeValues: {
+   *     ':v': 'Model-1',
+   *   },
+   * });
+   *
+   * console.log(paginator.items) // Returns an array of instances of Model class and HasManyChild class. As HasOneChild is related through another foreignKey, it is excluded.
+   * console.log(paginator.morePages) // Boolean meaning if there are more records available or not.
+   * await paginator.next(); // Fetches the next page if it exists.
+   * console.log(paginator.items) // Returns an array of all fetched instances of Model and HasManyChild classes.
+   * console.log(paginator.lastPageItems) // Returns an array of last page fetched instances of Model and HasManyChild classes.
+   * ```
+   */
+  static async queryWithChildrenRecords(opts: QueryOptions) {
+    const paginator = this.createPaginator(this._queryWithChildrenRecords.bind(this), opts);
+    await paginator.next();
+    return paginator;
+  }
+
+  /**
    * Similar to the {@link Entity.query | query method}, but automatically queries all the pages until there are no more records.
    * @returns {DynamoPaginator} - A paginator instance.
    */
   static async queryAll(opts: QueryOptions) {
     const paginator = await this.createPaginator(this._query.bind(this), opts);
+    return paginator.getAll();
+  }
+
+  /**
+   * Similar to the {@link Entity.queryWithChildrenRecords | query with children records method}, but automatically queries all the pages until there are no more records.
+   * @returns {DynamoPaginator} - A paginator instance.
+   */
+  static async queryAllWithChildrenRecords(opts: QueryOptions) {
+    const paginator = await this.createPaginator(this._queryWithChildrenRecords.bind(this), opts);
     return paginator.getAll();
   }
 
@@ -425,6 +533,7 @@ export class DynamoEntity extends BasicEntity {
         opts: {
           foreignKey = undefined,
           indexName = undefined,
+          parentPropertyOnChild = undefined,
         } = {},
       } = getHasManyModel(this, modelName) || {};
 
@@ -442,6 +551,12 @@ export class DynamoEntity extends BasicEntity {
           KeyConditionExpression: '#_fk = :_fk',
         });
 
+        if (parentPropertyOnChild) {
+          children.forEach((child) => {
+            child[parentPropertyOnChild] = this;
+          });
+        }
+
         this[modelName] = children;
       }
     }
@@ -454,6 +569,7 @@ export class DynamoEntity extends BasicEntity {
         opts: {
           foreignKey = undefined,
           indexName = undefined,
+          parentPropertyOnChild = undefined,
         } = {},
       } = getHasOneModel(this, modelName) || {};
 
@@ -471,8 +587,56 @@ export class DynamoEntity extends BasicEntity {
           KeyConditionExpression: '#_fk = :_fk',
         });
 
+        if (parentPropertyOnChild) {
+          children[0][parentPropertyOnChild] = this;
+        }
+
         // eslint-disable-next-line prefer-destructuring
         this[modelName] = children[0];
+      }
+    }
+
+    const belongsToModels = getBelongsToModels(this);
+
+    for (const modelName of belongsToModels) {
+      const {
+        model: ParentModel,
+        opts: {
+          foreignKey = undefined,
+          indexName = undefined,
+          parentPropertyOnChild = undefined,
+        } = {},
+      } = getBelongsToModel(this, modelName) || {};
+
+      if (foreignKey != null && indexName != null) {
+        const {
+          items: [parent],
+        } = await ParentModel.queryAll({
+          IndexName: indexName,
+          ExpressionAttributeNames: {
+            '#_fk': foreignKey,
+          },
+          ExpressionAttributeValues: {
+            ':_fk': this[foreignKey],
+          },
+          KeyConditionExpression: '#_fk = :_fk',
+        });
+
+        const {
+          propertyKey,
+          type,
+        } = getHasFromBelong(this, foreignKey, indexName, parentPropertyOnChild) || {};
+
+        if (propertyKey) {
+          if (type === 'hasOne') {
+            parent[propertyKey] = this;
+          } else if (type === 'hasMany') {
+            parent[propertyKey] = [this];
+          }
+        }
+
+        // eslint-disable-next-line prefer-destructuring
+        this[modelName] = parent;
       }
     }
   }
@@ -483,6 +647,7 @@ export class DynamoEntity extends BasicEntity {
 
   /**
    * Retrieve current item data from the database using the <a target="_blank" href="https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/DynamoDB/DocumentClient.html#get-property">aws-sdk documentclient get method</a>.
+   * @param {boolean} [includeRelated = false] - If this argument is true, the related children will be included. This will only work for children with a foreign key and index set. For each children group (hasOne or hasMany) a query on the foreign key index will be made.
    * @remarks
    * &nbsp;
    * - The model primary key and secondary key are automatically converted to the pattern of how data is saved to the database.

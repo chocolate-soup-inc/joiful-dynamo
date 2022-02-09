@@ -126,4 +126,6 @@ For more examples and full docs, access [https://chocolate-soup-inc.github.io/jo
 - [Single Table Adjacency List Design Pattern](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-adjacency-graphs.html)
 ## Contributions and Feedback
 
+This package definitely has a lot of space for new features and improvements, so please contribute! =)
+
 Contributions, ideas and bug reports are welcome and greatly appreciated. Please add [issues](https://github.com/chocolate-soup-inc/joiful-dynamo/issues) for suggestions and bug reports or create a pull request.

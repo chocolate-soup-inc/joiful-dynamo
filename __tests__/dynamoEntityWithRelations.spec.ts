@@ -32,10 +32,14 @@ class ParentModel extends Entity {
   @prop()
   name: string;
 
-  @hasOne(ChildModel, { nestedObject: false, foreignKey: '_fk', indexName: 'byFK' })
+  @hasOne(ChildModel, {
+    nestedObject: false, foreignKey: '_fk', indexName: 'byFK', parentPropertyOnChild: 'parent1',
+  })
   child: ChildModel;
 
-  @hasMany(ChildModel, { nestedObject: false, foreignKey: '_fk', indexName: 'byFK' })
+  @hasMany(ChildModel, {
+    nestedObject: false, foreignKey: '_fk', indexName: 'byFK', parentPropertyOnChild: 'parent2',
+  })
   children: ChildModel[];
 }
 
@@ -369,82 +373,6 @@ describe('Dynamo Entity Relations', () => {
     });
   });
 
-  describe('hasOne queries', () => {
-    beforeEach(async () => {
-      await dynamodbDocumentClient.batchWrite({
-        RequestItems: {
-          [tableName]: [{
-            PutRequest: {
-              Item: {
-                pk: 'ParentModel-1',
-                sk: 'ParentModel-1',
-                _entityName: 'ParentModel',
-                _fk: 'ParentModel-1',
-                name: 'Old Name',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-              },
-            },
-          }, {
-            PutRequest: {
-              Item: {
-                pk: 'ChildModel-2',
-                sk: 'ChildModel-2',
-                _entityName: 'ChildModel',
-                _fk: 'ParentModel-1',
-                name: 'Child Name',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-              },
-            },
-          }],
-        },
-      }).promise();
-    });
-
-    test('When getting the model and just load related later, it works correctly', async () => {
-      const parent = await ParentModel.getItem({
-        pk: '1',
-        sk: '1',
-      });
-
-      if (parent == null) return;
-
-      expect(parent.child.attributes).toStrictEqual({});
-      expect(parent.child.pk).toBeUndefined();
-      expect(parent.children).toStrictEqual([]);
-
-      await parent.load(true);
-
-      expect(parent.child).toBeInstanceOf(ChildModel);
-      expect(parent.child.pk).toEqual('2');
-      expect(parent.child.sk).toEqual('2');
-
-      expect(parent.children).toHaveLength(1);
-      expect(parent.children[0]).toBeInstanceOf(ChildModel);
-      expect(parent.children[0].pk).toEqual('2');
-      expect(parent.children[0].sk).toEqual('2');
-    })
-
-    test('When getting the model including related, it correctly sets the related data', async () => {
-      const parent = await ParentModel.getItem({
-        pk: '1',
-        sk: '1',
-      }, true);
-
-      if (parent == null) return;
-
-      expect(parent.child).toBeInstanceOf(ChildModel);
-      expect(parent.child.pk).toEqual('2');
-      expect(parent.child.sk).toEqual('2');
-
-      expect(parent.children).toHaveLength(1);
-      expect(parent.children[0]).toBeInstanceOf(ChildModel);
-      expect(parent.children[0].pk).toEqual('2');
-      expect(parent.children[0].sk).toEqual('2');
-    });
-  });
-
   describe('hasMany', () => {
     test('When the children are present, all the items are added to the database', async () => {
       let {
@@ -744,6 +672,226 @@ describe('Dynamo Entity Relations', () => {
           expect(childItems[1].pk).toEqual('3');
         });
       });
+    });
+  });
+
+  describe('relation queries', () => {
+    beforeEach(async () => {
+      await dynamodbDocumentClient.batchWrite({
+        RequestItems: {
+          [tableName]: [{
+            PutRequest: {
+              Item: {
+                pk: 'ParentModel-1',
+                sk: 'ParentModel-1',
+                _entityName: 'ParentModel',
+                _fk: 'ParentModel-1',
+                name: 'Old Name',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              },
+            },
+          }, {
+            PutRequest: {
+              Item: {
+                pk: 'ChildModel-2',
+                sk: 'ChildModel-2',
+                _entityName: 'ChildModel',
+                _fk: 'ParentModel-1',
+                name: 'Child Name',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              },
+            },
+          }],
+        },
+      }).promise();
+    });
+
+    test('When getting the model and just load related later, it works correctly', async () => {
+      const parent = await ParentModel.getItem({
+        pk: '1',
+        sk: '1',
+      });
+
+      if (parent == null) return;
+
+      expect(parent.child.attributes).toStrictEqual({});
+      expect(parent.child.pk).toBeUndefined();
+      expect(parent.children).toStrictEqual([]);
+
+      await parent.load(true);
+
+      expect(parent.child).toBeInstanceOf(ChildModel);
+      expect(parent.child.pk).toEqual('2');
+      expect(parent.child.sk).toEqual('2');
+
+      expect(parent.children).toHaveLength(1);
+      expect(parent.children[0]).toBeInstanceOf(ChildModel);
+      expect(parent.children[0].pk).toEqual('2');
+      expect(parent.children[0].sk).toEqual('2');
+    });
+
+    test('When getting the model including related, it correctly sets the related data', async () => {
+      const parent = await ParentModel.getItem({
+        pk: '1',
+        sk: '1',
+      }, true);
+
+      if (parent == null) return;
+
+      expect(parent.child).toBeInstanceOf(ChildModel);
+      expect(parent.child.pk).toEqual('2');
+      expect(parent.child.sk).toEqual('2');
+
+      expect(parent.children).toHaveLength(1);
+      expect(parent.children[0]).toBeInstanceOf(ChildModel);
+      expect(parent.children[0].pk).toEqual('2');
+      expect(parent.children[0].sk).toEqual('2');
+    });
+
+    test('When querying with related records it return the records correctly', async () => {
+      let {
+        items,
+      } = await ParentModel.queryWithChildrenRecords({
+        IndexName: 'byFK',
+        KeyConditionExpression: '#fk = :fk',
+        ExpressionAttributeNames: { '#fk': '_fk' },
+        ExpressionAttributeValues: { ':fk': 'ParentModel-1' },
+      });
+
+      expect(items).toHaveLength(2);
+      items = items.sort((a, b) => a._entityName.localeCompare(b._entityName));
+
+      expect(items[0]).toBeInstanceOf(ChildModel);
+      expect(items[1]).toBeInstanceOf(ParentModel);
+
+      // ALTHOUGH ITEMS WERE QUERIED, DATA WAS NOT SET IN THE PARENT MODEL.
+      expect(items[1].children).toEqual([]);
+      expect(items[1].child.pk).toBeUndefined();
+    });
+
+    test('When querying all with related records it returns the records correctly', async () => {
+      let {
+        items,
+      } = await ParentModel.queryAllWithChildrenRecords({
+        IndexName: 'byFK',
+        KeyConditionExpression: '#fk = :fk',
+        ExpressionAttributeNames: { '#fk': '_fk' },
+        ExpressionAttributeValues: { ':fk': 'ParentModel-1' },
+      });
+
+      expect(items).toHaveLength(2);
+      items = items.sort((a, b) => a._entityName.localeCompare(b._entityName));
+
+      expect(items[0]).toBeInstanceOf(ChildModel);
+      expect(items[1]).toBeInstanceOf(ParentModel);
+
+      // ALTHOUGH ITEMS WERE QUERIED, DATA WAS NOT SET IN THE PARENT MODEL.
+      expect(items[1].children).toEqual([]);
+      expect(items[1].child.pk).toBeUndefined();
+    });
+
+    test('When querying the child with related records it returns the records correctly', async () => {
+      let {
+        items,
+      } = await ChildModel.queryWithChildrenRecords({
+        IndexName: 'byFK',
+        KeyConditionExpression: '#fk = :fk',
+        ExpressionAttributeNames: { '#fk': '_fk' },
+        ExpressionAttributeValues: { ':fk': 'ParentModel-1' },
+      });
+
+      expect(items).toHaveLength(2);
+      items = items.sort((a, b) => a._entityName.localeCompare(b._entityName));
+
+      expect(items[0]).toBeInstanceOf(ChildModel);
+      expect(items[1]).toBeInstanceOf(ParentModel);
+
+      // ALTHOUGH ITEMS WERE QUERIED, DATA WAS NOT SET IN THE PARENT MODEL.
+      expect(items[1].children).toEqual([]);
+      expect(items[1].child.pk).toBeUndefined();
+    });
+
+    test('When querying all the child with related records it returns the records correctly', async () => {
+      let {
+        items,
+      } = await ChildModel.queryAllWithChildrenRecords({
+        IndexName: 'byFK',
+        KeyConditionExpression: '#fk = :fk',
+        ExpressionAttributeNames: { '#fk': '_fk' },
+        ExpressionAttributeValues: { ':fk': 'ParentModel-1' },
+      });
+
+      expect(items).toHaveLength(2);
+      items = items.sort((a, b) => a._entityName.localeCompare(b._entityName));
+
+      expect(items[0]).toBeInstanceOf(ChildModel);
+      expect(items[1]).toBeInstanceOf(ParentModel);
+
+      // ALTHOUGH ITEMS WERE QUERIED, DATA WAS NOT SET IN THE PARENT MODEL.
+      expect(items[1].children).toEqual([]);
+      expect(items[1].child.pk).toBeUndefined();
+    });
+  });
+
+  describe('belongsTo', () => {
+    beforeEach(async () => {
+      await dynamodbDocumentClient.batchWrite({
+        RequestItems: {
+          [tableName]: [{
+            PutRequest: {
+              Item: {
+                pk: 'ParentModel-1',
+                sk: 'ParentModel-1',
+                _entityName: 'ParentModel',
+                _fk: 'ParentModel-1',
+                name: 'Old Name',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              },
+            },
+          }, {
+            PutRequest: {
+              Item: {
+                pk: 'ChildModel-2',
+                sk: 'ChildModel-2',
+                _entityName: 'ChildModel',
+                _fk: 'ParentModel-1',
+                name: 'Old Child Name',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              },
+            },
+          }],
+        },
+      }).promise();
+    });
+
+    test('It correctly set the relations when getting an item and asking to include relations from the parent', async () => {
+      const parent = await ParentModel.getItem({
+        pk: '1',
+        sk: '1',
+      }, true);
+
+      expect(parent.child).toBeInstanceOf(ChildModel);
+      expect(parent.children).toHaveLength(1);
+      expect(parent.child.parent1).toStrictEqual(parent);
+      expect(parent.children[0].parent2).toStrictEqual(parent);
+    });
+
+    test('It correctly set the relations when getting an item and asking to include relations from the child', async () => {
+      const child = await ChildModel.getItem({
+        pk: '2',
+        sk: '2',
+      }, true);
+
+      expect(child.parent1).toBeInstanceOf(ParentModel);
+      expect(child.parent2).toBeInstanceOf(ParentModel);
+      expect(child.parent1.child).toStrictEqual(child);
+      expect(child.parent1.children).toStrictEqual([]);
+      expect(child.parent2.child.pk).toBeUndefined();
+      expect(child.parent2.children).toStrictEqual([child]);
     });
   });
 });

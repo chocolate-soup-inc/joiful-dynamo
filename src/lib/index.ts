@@ -4,7 +4,7 @@ export {
   aliasTo,
   aliases,
   compositeKey,
-  // hasMany,
+  hasMany,
   hasOne,
   prop,
   table,

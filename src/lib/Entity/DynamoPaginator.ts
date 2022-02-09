@@ -43,11 +43,11 @@ export class DynamoPaginator {
   }
 
   get lastPageItems() {
-    return this._lastPageItems.map((i) => this._initializer(i));
+    return this._lastPageItems;
   }
 
   get items() {
-    return this._items.map((i) => this._initializer(i));
+    return this._items;
   }
 
   get morePages(): boolean {
@@ -69,8 +69,10 @@ export class DynamoPaginator {
         LastEvaluatedKey: lastEvaluatedKey,
       } = await this._dynamoMethod.call(this, this.options);
 
-      this._lastPageItems = items;
-      this._items = this._items.concat(items);
+      const instances = items.map((i) => this._initializer(i));
+
+      this._lastPageItems = instances;
+      this._items = this._items.concat(instances);
       this._startKey = lastEvaluatedKey;
 
       return this;
