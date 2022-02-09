@@ -1,6 +1,7 @@
 import Joi from 'joi';
 import _ from 'lodash';
 import {
+  getHasManyModel,
   getHasManyModels,
   getHasManyNotNestedModels,
   getHasOneModel,
@@ -144,6 +145,34 @@ export class BasicEntity {
       if (!valid) {
         this._error = instance.error;
         return false;
+      }
+    }
+
+    for (const hasManyModel of getHasManyNotNestedModels(this)) {
+      const instances = this[hasManyModel];
+
+      const {
+        opts: {
+          required = false,
+        } = {},
+      } = getHasManyModel(this, hasManyModel) || {};
+
+      if (required && (instances == null || !Array.isArray(instances) || instances.length === 0)) {
+        const error = new Joi.ValidationError(`"${hasManyModel}" is required.`, this, this.attributes);
+        if (_throw) {
+          throw error;
+        } else {
+          this._error = error;
+          return false;
+        }
+      }
+
+      for (const instance of instances) {
+        const valid = instance.validate(_throw);
+        if (!valid) {
+          this._error = instance.error;
+          return false;
+        }
       }
     }
 

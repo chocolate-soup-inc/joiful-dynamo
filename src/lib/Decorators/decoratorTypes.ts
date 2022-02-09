@@ -4,6 +4,7 @@ export type RelationOptions = {
   required?: boolean;
   nestedObject?: boolean;
   foreignKey?: string;
+  indexName?: string;
 };
 
 /** @internal */

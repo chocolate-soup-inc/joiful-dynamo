@@ -1,3 +1,4 @@
+/* eslint-disable no-await-in-loop */
 import _ from 'lodash';
 import {
   getCreatedAtKey,
@@ -279,7 +280,7 @@ export class DynamoEntity extends BasicEntity {
    * console.log(instance.pk) // '1'
    * ```
    */
-  static async getItem(key: AWS.DynamoDB.DocumentClient.Key) {
+  static async getItem(key: AWS.DynamoDB.DocumentClient.Key, includeRelated = false) {
     const {
       Item: item,
     } = await this._dynamodb.get({
@@ -287,9 +288,13 @@ export class DynamoEntity extends BasicEntity {
       Key: this.setEntityOnKey(key),
     }).promise();
 
-    if (item) return this.initialize(item);
+    if (item) {
+      const instance = this.initialize(item);
+      if (includeRelated) await instance.queryRelated();
+      return instance;
+    }
 
-    return item;
+    return undefined;
   }
 
   /**
@@ -410,6 +415,68 @@ export class DynamoEntity extends BasicEntity {
     };
   }
 
+  /** @internal */
+  async queryRelated() {
+    const hasManyNotNestedModels = getHasManyNotNestedModels(this);
+
+    for (const modelName of hasManyNotNestedModels) {
+      const {
+        model: ChildModel,
+        opts: {
+          foreignKey = undefined,
+          indexName = undefined,
+        } = {},
+      } = getHasManyModel(this, modelName) || {};
+
+      if (foreignKey != null && indexName != null) {
+        const {
+          items: children,
+        } = await ChildModel.queryAll({
+          IndexName: indexName,
+          ExpressionAttributeNames: {
+            '#_fk': foreignKey,
+          },
+          ExpressionAttributeValues: {
+            ':_fk': this[foreignKey],
+          },
+          KeyConditionExpression: '#_fk = :_fk',
+        });
+
+        this[modelName] = children;
+      }
+    }
+
+    const hasOneNotNestedModels = getHasOneNotNestedModels(this);
+
+    for (const modelName of hasOneNotNestedModels) {
+      const {
+        model: ChildModel,
+        opts: {
+          foreignKey = undefined,
+          indexName = undefined,
+        } = {},
+      } = getHasOneModel(this, modelName) || {};
+
+      if (foreignKey != null && indexName != null) {
+        const {
+          items: children,
+        } = await ChildModel.queryAll({
+          IndexName: indexName,
+          ExpressionAttributeNames: {
+            '#_fk': foreignKey,
+          },
+          ExpressionAttributeValues: {
+            ':_fk': this[foreignKey],
+          },
+          KeyConditionExpression: '#_fk = :_fk',
+        });
+
+        // eslint-disable-next-line prefer-destructuring
+        this[modelName] = children[0];
+      }
+    }
+  }
+
   // ---------------- INSTANCE SUPPORT METHODS ----------------
 
   // ---------------- INSTANCE METHODS ----------------
@@ -435,7 +502,7 @@ export class DynamoEntity extends BasicEntity {
    * console.log(instance.otherAttributeFromDatabase) // value loaded from the database.
    * ```
    */
-  async load() {
+  async load(includeRelated = false) {
     const pk = this._primaryKey;
     const sk = this._secondaryKey;
 
@@ -452,6 +519,7 @@ export class DynamoEntity extends BasicEntity {
 
     if (item) {
       this.attributes = this.parseDynamoAttributes(item);
+      if (includeRelated) await this.queryRelated();
     } else {
       throw new Error('Record not found.');
     }

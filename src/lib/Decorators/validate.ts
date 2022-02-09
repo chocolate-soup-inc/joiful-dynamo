@@ -89,23 +89,35 @@ export function joiSchema(target: any) {
   [{
     modelsArray: hasOneNestedModels,
     getModelFunc: getHasOneModel,
+    isArray: false,
   }, {
     modelsArray: hasManyNestedModels,
     getModelFunc: getHasManyModel,
-  }].forEach(({ modelsArray, getModelFunc }) => {
+    isArray: true,
+  }].forEach(({ modelsArray, getModelFunc, isArray }) => {
     for (const model of modelsArray) {
       const {
         model: ModelClass,
         opts,
       } = getModelFunc(target, model) || {};
 
-      let schema = joiSchema(ModelClass.prototype);
+      const schema = joiSchema(ModelClass.prototype);
+
       if (schema != null) {
-        if (opts && opts.required) {
-          schema = schema.required();
+        let finalSchema: Joi.ObjectSchema | Joi.ArraySchema = schema;
+        if (isArray) {
+          finalSchema = Joi.array().items(schema);
         }
 
-        joiKeys[model] = schema;
+        if (opts && opts.required) {
+          finalSchema = finalSchema.required();
+
+          if (isArray) {
+            finalSchema = finalSchema.min(1);
+          }
+        }
+
+        joiKeys[model] = finalSchema;
       }
     }
   });

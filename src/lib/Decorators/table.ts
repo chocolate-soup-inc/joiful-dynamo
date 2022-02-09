@@ -24,7 +24,7 @@ if (isTest || isLocal) {
 /** @internal */
 export const dynamodbDocumentClient = new AWS.DynamoDB.DocumentClient(dynamoOptions);
 
-const tableMetadataKey = Symbol('table');
+const tableMetadataKey = 'table';
 
 export type TableOptions = {
   documentClient?: AWS.DynamoDB.DocumentClient;

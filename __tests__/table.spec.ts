@@ -1,6 +1,6 @@
 import AWS from 'aws-sdk';
-import { Entity } from '../src/lib/classes/Entity';
-import { table } from '../src/lib/decorators/table';
+import { Entity } from '../src/lib/Entity';
+import { table } from '../src/lib/Decorators';
 
 const tableName = 'test-table';
 

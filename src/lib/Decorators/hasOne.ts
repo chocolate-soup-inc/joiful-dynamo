@@ -6,7 +6,7 @@ import { Constructor, RelationModel, RelationOptions } from './decoratorTypes';
 import { setPropGettersAndSetters } from './prop';
 
 /** @internal */
-export const hasOneMetadataKey = 'hasOne';
+const hasOneMetadataKey = 'hasOne';
 const hasOnePropertiesMetadataKey = 'hasOneProperties';
 
 /** @internal */
@@ -56,7 +56,11 @@ export function getHasOneProperty(target: any, propertyKey: string): { entity: s
 }
 
 /** @internal */
-export function setHasOneDescriptor(target: any, modelName: string, ChildModel: Constructor) {
+export function setHasOneDescriptor(
+  target: any,
+  modelName: string,
+  ChildModel: Constructor,
+) {
   const propertyKey = `_${hasOneMetadataKey}_${modelName}`;
 
   Object.defineProperty(target, modelName, {

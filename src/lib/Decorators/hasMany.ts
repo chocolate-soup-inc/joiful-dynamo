@@ -2,8 +2,9 @@ import Joi from 'joi';
 import _ from 'lodash';
 import 'reflect-metadata';
 import { Constructor, RelationModel, RelationOptions } from './decoratorTypes';
+import { setPropGettersAndSetters } from './prop';
 
-const hasManyMetadataKey = Symbol('hasMany');
+const hasManyMetadataKey = 'hasMany';
 
 /** @internal */
 export function getHasManyModels(target: any): string[] | undefined {
@@ -47,56 +48,59 @@ export function setHasManyDescriptor(
   modelName: string,
   ChildModel: Constructor,
 ) {
-  const propertyKey = `_${hasManyMetadataKey.toString()}_${modelName}`;
-  if (target[propertyKey] == null) target[propertyKey] = [];
+  const propertyKey = `_${hasManyMetadataKey}_${modelName}`;
 
   Object.defineProperty(target, modelName, {
     get() {
-      return target[propertyKey];
+      return this[propertyKey] || [];
     },
     set(value) {
-      try {
-        Joi.assert(
-          value,
-          Joi
-            .array()
-            .items(
-              Joi
-                .any()
-                .custom((v) => (v instanceof ChildModel)),
-            ),
-        );
+      if (Array.isArray(value)) {
+        if (value.filter((v) => !(v instanceof ChildModel)).length > 0) {
+          try {
+            for (const item of value) {
+              Joi.assert(
+                item,
+                Joi.object().unknown(true),
+              );
+            }
 
-        target[propertyKey] = value;
-      } catch (error) {
-        Joi.assert(
-          value,
-          Joi
-            .array()
-            .items(
-              Joi
-                .object()
-                .unknown(true),
-            ),
-        );
+            this[propertyKey] = value.map((v) => new ChildModel(v));
+          } catch (error) {
+            throw new TypeError(`Array contain invalid items. All items must be an instance of ${ChildModel.name}`);
+          }
+        } else {
+          this[propertyKey] = value;
+        }
+      } else {
+        throw new TypeError(`Value must be an array of instances of ${ChildModel.name}`);
       }
-
-      target[propertyKey] = value.map((v) => new ChildModel(v));
     },
     enumerable: true,
+    configurable: false,
+  });
+
+  Object.defineProperty(target, `_noInitializer${_.capitalize(modelName)}`, {
+    get() {
+      return this[propertyKey];
+    },
+    enumerable: false,
     configurable: false,
   });
 }
 
 export function hasMany(ChildModel: Constructor, opts?: RelationOptions) {
   return (target: any, propertyKey: string): void => {
-    const reflectTarget = target.constructor;
     Reflect.defineMetadata(hasManyMetadataKey, {
       model: ChildModel,
       opts,
-    }, reflectTarget, propertyKey);
+    }, target, propertyKey);
 
-    let models: string[] = Reflect.getMetadata(hasManyMetadataKey, reflectTarget);
+    if (opts?.foreignKey) {
+      setPropGettersAndSetters(target, opts?.foreignKey);
+    }
+
+    let models: string[] = Reflect.getMetadata(hasManyMetadataKey, target);
 
     if (models) {
       models.push(propertyKey);
@@ -107,7 +111,7 @@ export function hasMany(ChildModel: Constructor, opts?: RelationOptions) {
     Reflect.defineMetadata(
       hasManyMetadataKey,
       models,
-      reflectTarget,
+      target,
     );
 
     setHasManyDescriptor(target, propertyKey, ChildModel);
@@ -121,17 +125,21 @@ export function transformHasManyAttributes(target: any, item: Record<string, any
   const nestedModels: string[] = getHasManyNestedModels(target) || [];
   for (const model of nestedModels) {
     if (item[model] != null) {
-      finalAttributes[model] = item[model].map((value) => {
-        const {
-          model: ModelClass,
-        } = getHasManyModel(target, model) || {};
+      if (Array.isArray(item[model]) && item[model].length > 0) {
+        finalAttributes[model] = item[model].map((value) => {
+          const {
+            model: ModelClass,
+          } = getHasManyModel(target, model) || {};
 
-        if (value instanceof ModelClass) return value.attributes;
+          if (value instanceof ModelClass) return value.attributes;
 
-        // VALUE IS AN OBJECT
-        const instance = new ModelClass(model);
-        return instance.attributes;
-      });
+          // VALUE IS AN OBJECT
+          const instance = new ModelClass(model);
+          return instance.attributes;
+        });
+      } else {
+        delete finalAttributes[model];
+      }
     }
   }
 

@@ -504,8 +504,12 @@ describe('Dynamo Entity', () => {
 
       describe('When there is some data registered', () => {
         let now;
+
         beforeEach(async () => {
+          jest.useFakeTimers();
+
           now = new Date().toISOString();
+
           await dynamodbDocumentClient.batchWrite({
             RequestItems: {
               [tableName]: [{
@@ -522,6 +526,12 @@ describe('Dynamo Entity', () => {
               }],
             },
           }).promise();
+
+          jest.useRealTimers();
+        });
+
+        afterEach(async () => {
+          jest.useRealTimers();
         });
 
         test('It updates an existing item and sets a new createdAt and updatedAt', async () => {
@@ -579,6 +589,8 @@ describe('Dynamo Entity', () => {
         });
 
         test('It creates a new item when it does not match the key', async () => {
+          jest.useFakeTimers();
+
           const scanOptions = {
             FilterExpression: 'begins_with(pk, :v)',
             ExpressionAttributeValues: {
