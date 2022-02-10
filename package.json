@@ -1,7 +1,7 @@
 {
   "name": "joiful-dynamodb",
   "version": "1.0.0",
-  "description": "Project to interact with Dynamodb having some basic ORM functions.",
+  "description": "Project to interact with Dynamodb having some basic ORM functions like basic relations and validations.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "scripts": {
