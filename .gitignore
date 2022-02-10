@@ -23,4 +23,6 @@ schema.graphql
 # Local DynamoDB
 .dynamodb
 
+dist/**/*
+
 .vscode

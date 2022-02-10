@@ -10,7 +10,7 @@
     "forceConsistentCasingInFileNames": true,
     "inlineSourceMap": true,
     "inlineSources": true,
-    "lib": ["es2017", "es7", "es6", "dom"],
+    "lib": ["es2017"],
     "module": "commonjs",
     "moduleResolution": "node",
     "noImplicitAny": false,
@@ -19,7 +19,6 @@
     "paths": {
       "@src/*": ["src/*"],
       "@lib/*": ["src/lib/*"],
-      "@chocolatesoup/joiful-dynamodb": ["chocolatesoup__joiful-dynamodb"],
     },
     "preserveConstEnums": true,
     "resolveJsonModule": true,

@@ -35,6 +35,8 @@ jobs:
         run: pnpm install
       - name: Run Tests
         run: pnpm test
+      - name: Generate Package
+        run: pnpm build
       - name: Configure npm
         run: pnpm config set //registry.npmjs.org/:_authToken=${NPM_TOKEN}
       - name: Publish Package
