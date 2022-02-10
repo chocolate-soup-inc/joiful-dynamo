@@ -33,8 +33,9 @@ jobs:
         run: pnpm install
       - name: Generate package
         run: pnpm build
+      - run: npm ci
       - name: Publish Package
-        run: pnpm publish --access public
+        run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - uses: 8398a7/action-slack@v3
