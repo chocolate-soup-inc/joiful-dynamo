@@ -38,7 +38,7 @@ import {
   props,
   table,
   validate,
-} from 'joiful-dynamo';
+} from '@chocolatesoup/joiful-dynamo';
 
 import * as Joi from 'joi';
 
