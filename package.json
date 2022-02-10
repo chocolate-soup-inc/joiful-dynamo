@@ -1,6 +1,6 @@
 {
   "name": "@chocolatesoup/joiful-dynamodb",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Project to interact with Dynamodb having some basic ORM functions like basic relations and validations.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
