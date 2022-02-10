@@ -1,4 +1,6 @@
 __tests__
+.git
+.github
 .husky
 docs
 src
@@ -6,7 +8,6 @@ src
 .dropboxignore
 .eslintignore
 .eslintrc.js
-.git
 .gitignore
 .pnpm-debug.log
 jest-dynamodb-config.js
