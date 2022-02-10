@@ -26,5 +26,3 @@ schema.graphql
 lib/**/*
 
 .vscode
-
-pnpm-lock.yaml
