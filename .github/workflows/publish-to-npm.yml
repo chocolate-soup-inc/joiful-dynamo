@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-20.04
+    env:
+      - NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
       - uses: actions/checkout@v2
       - uses: 8398a7/action-slack@v3
@@ -28,12 +30,8 @@ jobs:
       - name: Generate package
         run: npm run build
       - run: npm ci
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Publish Package
         run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - uses: 8398a7/action-slack@v3
         with:
           author_name: by ${{ github.event.pusher.name }}
