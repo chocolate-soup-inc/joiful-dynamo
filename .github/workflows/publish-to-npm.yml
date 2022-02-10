@@ -13,6 +13,14 @@ jobs:
         node-version: [14]
     steps:
       - uses: actions/checkout@v2
+      - uses: 8398a7/action-slack@v3
+        with:
+          author_name: by ${{ github.event.pusher.name }}
+          status: ${{ job.status }}
+          text: Starting publish of Joiful Dynamo to NPM
+          fields: repo,commit,ref,job
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_CICD_WEBHOOK_URL }}
       - uses: pnpm/action-setup@v2.0.1
         with:
           version: 6.27.1
@@ -29,3 +37,15 @@ jobs:
         run: pnpm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - uses: 8398a7/action-slack@v3
+        with:
+          author_name: by ${{ github.event.pusher.name }}
+          status: ${{ job.status }}
+          text: Publish of Joiful Dynamo to NPM finished.
+          # fields: repo,message,commit,author,action,eventName,ref,workflow,job,took
+          fields: repo,commit,ref,job,took
+          mention: U025BND74BY
+          if_mention: failure,cancelled
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_CICD_WEBHOOK_URL }} # required
+        if: always() # Pick up events even if the job fails or is canceled.
