@@ -1,14 +1,16 @@
 {
   "name": "@chocolatesoup/joiful-dynamodb",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "description": "Project to interact with Dynamodb having some basic ORM functions like basic relations and validations.",
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "private": false,
+  "keywords": ["dynamodb", "joi", "typescript", "decorators"],
   "scripts": {
     "test": "jest --cache --colors --detectOpenHandles --forceExit --maxWorkers=3",
     "test:watch": "jest --cache --colors --detectOpenHandles --forceExit --maxWorkers=3 --watchAll",
     "test:clearCache": "jest --clearCache",
-    "build": "rm -rf ./lib/ && tsc",
+    "build": "rm -rf ./dist/ && tsc",
     "lint": "eslint --fix . --ext .js,.ts",
     "build:docs": "rm -rf ./docs/ && typedoc",
     "prepare": "husky install"
