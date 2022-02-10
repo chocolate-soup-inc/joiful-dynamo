@@ -22,12 +22,12 @@ As this library was architected with single table design in mind, if you want to
 
 Using npm:
 ```
-npm i --save joiful-dynamodb
+npm i --save @chocolatesoup/joiful-dynamodb
 ```
 
 Using yarn:
 ```
-yarn add joiful-dynamodb
+yarn add @chocolatesoup/joiful-dynamodb
 ```
 
 ```ts
