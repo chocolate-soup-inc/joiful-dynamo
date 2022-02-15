@@ -10,6 +10,9 @@ class TestModel extends Entity {
 }
 
 describe('Aliases Decorator', () => {
+  test('It contains the correct attribute list', () => {
+    expect(TestModel.attributeList).toStrictEqual(['alias1', 'alias2', 'alias3', 'property']);
+  });
   test('It correctly sets the alias when setting the property', () => {
     const instance = new TestModel();
     const propertyValue = 'test-value';

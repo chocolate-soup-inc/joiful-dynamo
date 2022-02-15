@@ -18,17 +18,37 @@ Using [AWS DynamoDB](https://aws.amazon.com/dynamodb) is always a very challengi
 
 As this library was architected with single table design in mind, if you want to use a multi table design, use it at your own risk.
 
-## Installation and Basic Usage
+## Installation
 
-Using npm:
+1. Install the package:
+
 ```
 npm i --save @chocolatesoup/joiful-dynamodb
 ```
 
-Using yarn:
+2. Install [reflect-metadata](https://github.com/rbuckton/reflect-metadata):
+
 ```
-yarn add @chocolatesoup/joiful-dynamodb
+npm install reflect-metadata --save
 ```
+
+3. You may need to install node typings:
+
+```
+npm install @types/node --save-dev
+```
+
+4. TypeScript configuration
+Also, make sure you are using TypeScript version 3.3 or higher, and you have enabled the following settings in [tsconfig.json](https://www.typescriptlang.org/docs/handbook/tsconfig-json.html):
+
+```json
+"emitDecoratorMetadata": true,
+"experimentalDecorators": true,
+```
+
+You may also need to enable es6 in the lib section of compiler options, or install es6-shim from @types.
+
+## Basic Usage
 
 ```ts
 import {

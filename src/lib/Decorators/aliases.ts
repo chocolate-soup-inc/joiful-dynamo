@@ -1,7 +1,8 @@
 import 'reflect-metadata';
 import { setPropGettersAndSetters } from './prop';
 
-const aliasesMapMetadataKey = Symbol('aliasesMap');
+const aliasesMapMetadataKey = 'aliasesMap';
+const aliasesForProperty = 'aliasesForProperty';
 
 /** @internal */
 export const getAliasesMap = (target: any): Record<string, string> => {
@@ -11,6 +12,11 @@ export const getAliasesMap = (target: any): Record<string, string> => {
 /** @internal */
 export const getAliasTarget = (target: any, key: string): string => {
   return getAliasesMap(target)[key] || key;
+};
+
+/** @internal */
+export const getAliasesForProperty = (target: any, key: string): string[] => {
+  return Reflect.getMetadata(aliasesForProperty, target, key) || [];
 };
 
 /** @internal */
@@ -73,6 +79,15 @@ export function setAliasDescriptor(target: any, aliasKey: string, propertyKey: s
 export function aliasTo(aliasToName: string) {
   return (target: any, propertyKey: string): void => {
     // TARGET IS THE CLASS PROTOTYPE
+    const currentAliasesForProperty = getAliasesForProperty(target, aliasToName);
+
+    Reflect.defineMetadata(
+      aliasesForProperty,
+      currentAliasesForProperty.concat([propertyKey]),
+      target,
+      aliasToName,
+    );
+
     setPropGettersAndSetters(target, aliasToName);
     setAliasDescriptor(target, propertyKey, aliasToName);
   };
@@ -118,6 +133,14 @@ export function aliases(aliasesNames: string[]) {
   return (target: any, propertyKey: string): void => {
     // TARGET IS THE CLASS PROTOTYPE
     setPropGettersAndSetters(target, propertyKey);
+
+    const currentAliasesForProperty = getAliasesForProperty(target, propertyKey);
+    Reflect.defineMetadata(
+      aliasesForProperty,
+      currentAliasesForProperty.concat(aliasesNames),
+      target,
+      propertyKey,
+    );
 
     for (const alias of aliasesNames) {
       setAliasDescriptor(target, alias, propertyKey);

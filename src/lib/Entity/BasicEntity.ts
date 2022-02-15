@@ -1,6 +1,7 @@
 import Joi from 'joi';
 import _ from 'lodash';
 import {
+  getAliasesForProperty,
   getHasManyModel,
   getHasManyModels,
   getHasManyNotNestedModels,
@@ -63,6 +64,19 @@ export class BasicEntity {
 
   protected setAttribute(key: string, value: any): void {
     this.attributes[key] = value;
+  }
+
+  /**
+   * Gets the available attribute list and its aliases.
+   */
+  static get attributeList(): string[] {
+    const properties = Object.keys(this.prototype);
+
+    const aliases = properties.reduce((agg, item) => {
+      return agg.concat(getAliasesForProperty(this.prototype, item));
+    }, [] as string[]);
+
+    return properties.concat(aliases).sort((a, b) => a.localeCompare(b));
   }
 
   /** @internal */
