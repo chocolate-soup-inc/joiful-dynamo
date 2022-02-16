@@ -16,12 +16,24 @@ module.exports = {
       }, {
         AttributeName: 'sk',
         AttributeType: 'S',
+      }, {
+        AttributeName: '_entityName',
+        AttributeType: 'S',
       }],
       BillingMode: 'PAY_PER_REQUEST',
       GlobalSecondaryIndexes: [{
         IndexName: 'bySK',
         KeySchema: [{
           AttributeName: 'sk',
+          KeyType: 'HASH',
+        }],
+        Projection: {
+          ProjectionType: 'ALL',
+        },
+      }, {
+        IndexName: 'byEntityName',
+        KeySchema: [{
+          AttributeName: '_entityName',
           KeyType: 'HASH',
         }],
         Projection: {

@@ -143,7 +143,14 @@ export class DynamoEntity extends BasicEntity {
     };
   }
 
-  protected static prepareEntityExpression(opts, key) {
+  protected static prepareEntityExpression(opts, key: string) {
+    if (
+      Object.values(opts?.ExpressionAttributeNames || {}).includes('_entityName')
+      || (opts?.[key] || '').includes('_entityName')
+    ) {
+      return opts;
+    }
+
     const {
       opts: newOpts,
       attributeName,

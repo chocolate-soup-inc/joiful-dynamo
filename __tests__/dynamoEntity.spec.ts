@@ -339,6 +339,17 @@ describe('Dynamo Entity', () => {
         },
       };
 
+      const entityNameQueryOptions = {
+        IndexName: 'byEntityName',
+        KeyConditionExpression: '#en = :en',
+        ExpressionAttributeNames: {
+          '#en': '_entityName',
+        },
+        ExpressionAttributeValues: {
+          ':en': TestModel._entityName,
+        },
+      };
+
       test('It should return no items when there is not data in the database', async () => {
         const response = await TestModel.query(queryOptions);
         expect(response).toBeInstanceOf(DynamoPaginator);
@@ -455,6 +466,11 @@ describe('Dynamo Entity', () => {
 
           expect(testModelItems).toHaveLength(2);
           expect(otherModelItems).toHaveLength(0);
+        });
+
+        test('It should also work with an Index that includes the entityName in it', async () => {
+          const { items } = await TestModel.queryAll(entityNameQueryOptions);
+          expect(items).toHaveLength(3);
         });
       });
     });
