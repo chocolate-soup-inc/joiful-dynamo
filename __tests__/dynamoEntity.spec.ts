@@ -1,10 +1,10 @@
 /* eslint-disable no-await-in-loop */
+import Joi from 'joi';
 import { DynamoPaginator } from '../src/lib/Entity/DynamoPaginator';
 import { Entity } from '../src/lib/Entity';
 import { prop } from '../src/lib/Decorators/prop';
 import { dynamodbDocumentClient, table } from '../src/lib/Decorators/table';
 import { hasMany, hasOne, validate } from '../src/lib/Decorators';
-import Joi from 'joi';
 
 const tableName = 'test-table';
 const onlyPkTableName = 'test-only-pk';
