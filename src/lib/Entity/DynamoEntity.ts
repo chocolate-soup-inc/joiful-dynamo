@@ -669,9 +669,10 @@ export class DynamoEntity extends BasicEntity {
    */
   async load(includeRelated = false) {
     const pk = this._primaryKey;
-    const sk = this._secondaryKey;
+    // const sk = this._secondaryKey;
 
-    if (pk == null || sk == null) {
+    // if (pk == null || sk == null) {
+    if (pk == null) {
       throw new Error('primary key and/or secondary key props not set');
     }
 
@@ -745,7 +746,7 @@ export class DynamoEntity extends BasicEntity {
     if (!this.valid) throw new Error('The instance is invalid');
 
     if (this._primaryKey == null) throw new Error('Primary Key property should be set');
-    if (this._secondaryKey == null) throw new Error('Secondary Key property should be set');
+    // if (this._secondaryKey == null) throw new Error('Secondary Key property should be set');
 
     const item = this.dynamoAttributes;
 
@@ -807,7 +808,7 @@ export class DynamoEntity extends BasicEntity {
     if (!this.valid) throw new Error('The instance is invalid');
 
     if (this._primaryKey == null) throw new Error('Primary Key property should be set');
-    if (this._secondaryKey == null) throw new Error('Secondary Key property should be set');
+    // if (this._secondaryKey == null) throw new Error('Secondary Key property should be set');
 
     const item = this.dynamoAttributes;
 

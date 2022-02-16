@@ -69,5 +69,17 @@ module.exports = {
         },
       }],
     },
+    {
+      TableName: 'test-only-pk',
+      KeySchema: [{
+        AttributeName: 'pk',
+        KeyType: 'HASH',
+      }],
+      AttributeDefinitions: [{
+        AttributeName: 'pk',
+        AttributeType: 'S',
+      }],
+      BillingMode: 'PAY_PER_REQUEST',
+    },
   ],
 };

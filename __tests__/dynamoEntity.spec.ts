@@ -5,6 +5,7 @@ import { prop } from '../src/lib/Decorators/prop';
 import { dynamodbDocumentClient, table } from '../src/lib/Decorators/table';
 
 const tableName = 'test-table';
+const onlyPkTableName = 'test-only-pk';
 
 @table(tableName)
 class TestModel extends Entity {
@@ -39,7 +40,25 @@ class OtherModel extends Entity {
   updatedAt: string;
 }
 
+@table(onlyPkTableName)
+class ModelWithNoSecondaryKey extends Entity {
+  @prop({ primaryKey: true })
+  pk: string;
+}
+
 describe('Dynamo Entity', () => {
+  afterEach(async () => {
+    for (const Model of [TestModel, OtherModel, ModelWithNoSecondaryKey]) {
+      const {
+        items,
+      } = await Model.scanAll();
+
+      for (const item of items) {
+        await Model.deleteItem(item.attributes);
+      }
+    }
+  });
+
   describe('Database integration', () => {
     describe('Scan', () => {
       test('It should return no items when there is not data in the database', async () => {
@@ -59,7 +78,7 @@ describe('Dynamo Entity', () => {
       });
 
       describe('When there is some data registered', () => {
-        beforeAll(async () => {
+        beforeEach(async () => {
           await dynamodbDocumentClient.batchWrite({
             RequestItems: {
               [tableName]: [{
@@ -140,9 +159,7 @@ describe('Dynamo Entity', () => {
           expect(response.items[1]).toBeInstanceOf(TestModel);
           expect(response.morePages).toBeFalsy();
           expect(response.lastPageItems.length).toEqual(0);
-          await expect(async () => {
-            await response.next();
-          }).rejects.toThrowError('All pages were already scanned');
+          await expect(response.next()).rejects.toThrowError('All pages were already scanned');
         });
 
         test('Scan only returns the items of the correct model', async () => {
@@ -181,7 +198,7 @@ describe('Dynamo Entity', () => {
       });
 
       describe('When there is some data registered', () => {
-        beforeAll(async () => {
+        beforeEach(async () => {
           await dynamodbDocumentClient.batchWrite({
             RequestItems: {
               [tableName]: [{
@@ -271,9 +288,7 @@ describe('Dynamo Entity', () => {
           expect(response.items[1]).toBeInstanceOf(TestModel);
           expect(response.morePages).toBeFalsy();
           expect(response.lastPageItems.length).toEqual(0);
-          await expect(async () => {
-            await response.next();
-          }).rejects.toThrowError('All pages were already scanned');
+          await expect(response.next()).rejects.toThrowError('All pages were already scanned');
         });
 
         test('Query only returns the items of the correct model', async () => {
@@ -296,7 +311,7 @@ describe('Dynamo Entity', () => {
       });
 
       describe('When there is some data registered', () => {
-        beforeAll(async () => {
+        beforeEach(async () => {
           await dynamodbDocumentClient.batchWrite({
             RequestItems: {
               [tableName]: [{
@@ -334,11 +349,9 @@ describe('Dynamo Entity', () => {
         });
 
         test('It should throw an error if not passing a full key to the method', async () => {
-          await expect(async () => {
-            await TestModel.getItem({
-              pk: 'get-1',
-            });
-          }).rejects.toThrowError('The number of conditions on the keys is invalid');
+          await expect(TestModel.getItem({
+            pk: 'get-1',
+          })).rejects.toThrowError('The number of conditions on the keys is invalid');
         });
 
         test('It should only return items of the correct model', async () => {
@@ -360,12 +373,10 @@ describe('Dynamo Entity', () => {
 
     describe('Delete Item', () => {
       test('should return error when the item is not found', async () => {
-        await expect(async () => {
-          await TestModel.deleteItem({
-            pk: 'delete-1',
-            sk: 'delete-2',
-          });
-        }).rejects.toThrowError('The conditional request failed');
+        await expect(TestModel.deleteItem({
+          pk: 'delete-1',
+          sk: 'delete-2',
+        })).rejects.toThrowError('The conditional request failed');
       });
 
       describe('When there is some data registered', () => {
@@ -424,15 +435,15 @@ describe('Dynamo Entity', () => {
         });
 
         test('It should delete only from the correct model', async () => {
-          await expect(() => OtherModel.deleteItem({
+          await expect(OtherModel.deleteItem({
             pk: 'delete-3',
             sk: 'delete-4',
           })).rejects.toThrowError('The conditional request failed');
 
-          await expect(() => TestModel.deleteItem({
+          await expect(TestModel.deleteItem({
             pk: 'delete-3',
             sk: 'delete-4',
-          })).not.toThrowError('The conditional request failed');
+          })).resolves.not.toThrow('The conditional request failed');
         });
       });
     });
@@ -444,7 +455,7 @@ describe('Dynamo Entity', () => {
           sk: 'load-2',
         });
 
-        await expect(() => instance.load()).rejects.toThrowError('Record not found.');
+        await expect(instance.load()).rejects.toThrowError('Record not found.');
       });
 
       describe('When there is some data registered', () => {
@@ -502,7 +513,7 @@ describe('Dynamo Entity', () => {
       test('It should throw an error if nothing is set', async () => {
         const instance = new TestModel();
 
-        await expect(() => instance.create()).rejects.toThrowError('You cannot save an instance with no attributes at all.');
+        await expect(instance.create()).rejects.toThrowError('You cannot save an instance with no attributes at all.');
       });
 
       describe('When there is some data registered', () => {
@@ -656,7 +667,7 @@ describe('Dynamo Entity', () => {
       test('It should throw an error if nothing is set', async () => {
         const instance = new TestModel();
 
-        await expect(() => instance.update()).rejects.toThrowError('You cannot save an instance with no attributes at all.');
+        await expect(instance.update()).rejects.toThrowError('You cannot save an instance with no attributes at all.');
       });
 
       describe('When there is some data registered', () => {
@@ -794,6 +805,90 @@ describe('Dynamo Entity', () => {
           expect(instance.updatedAt).not.toBeUndefined();
         });
       });
+    });
+  });
+
+  describe('Testing a model with no secondary Key', () => {
+    beforeEach(async () => {
+      await dynamodbDocumentClient.batchWrite({
+        RequestItems: {
+          [onlyPkTableName]: [{
+            PutRequest: {
+              Item: {
+                pk: 'ModelWithNoSecondaryKey-1',
+                extraAttribute: 'extra-1',
+                _entityName: 'ModelWithNoSecondaryKey',
+              },
+            },
+          }, {
+            PutRequest: {
+              Item: {
+                pk: 'ModelWithNoSecondaryKey-2',
+                extraAttribute: 'extra-2',
+                _entityName: 'ModelWithNoSecondaryKey',
+              },
+            },
+          }],
+        },
+      }).promise();
+    });
+
+    test('Scan works', async () => {
+      const { items } = await ModelWithNoSecondaryKey.scanAll();
+
+      expect(items).toHaveLength(2);
+    });
+
+    test('Get', async () => {
+      const item = await ModelWithNoSecondaryKey.getItem({ pk: '1' });
+
+      expect(item).toBeInstanceOf(ModelWithNoSecondaryKey);
+      expect(item.pk).toEqual('1');
+      expect(item.extraAttribute).toEqual('extra-1');
+    });
+
+    test('Delete', async () => {
+      let { items } = await ModelWithNoSecondaryKey.scanAll();
+      expect(items).toHaveLength(2);
+
+      await ModelWithNoSecondaryKey.deleteItem({ pk: '1' });
+
+      ({ items } = await ModelWithNoSecondaryKey.scanAll());
+      expect(items).toHaveLength(1);
+    });
+
+    test('Instance Load', async () => {
+      const instance = new ModelWithNoSecondaryKey({ pk: '1' });
+      expect(instance.extraAttribute).toBeUndefined();
+      await instance.load();
+      expect(instance.extraAttribute).toEqual('extra-1');
+    });
+
+    test('Instance Create', async () => {
+      const instance = new ModelWithNoSecondaryKey({ pk: '3' });
+      let { items } = await ModelWithNoSecondaryKey.scanAll();
+      expect(items).toHaveLength(2);
+
+      await instance.create();
+      ({ items } = await ModelWithNoSecondaryKey.scanAll());
+      expect(items).toHaveLength(3);
+    });
+
+    test('Instance Update', async () => {
+      const instance = new ModelWithNoSecondaryKey({ pk: '1', extraAttribute: 'new-extra' });
+      let { items } = await ModelWithNoSecondaryKey.scanAll();
+      expect(items).toHaveLength(2);
+
+      await instance.update();
+
+      ({ items } = await ModelWithNoSecondaryKey.scanAll());
+      expect(items).toHaveLength(2);
+
+      const newInstance = await ModelWithNoSecondaryKey.getItem({
+        pk: '1',
+      });
+
+      expect(newInstance.extraAttribute).toEqual('new-extra');
     });
   });
 });
