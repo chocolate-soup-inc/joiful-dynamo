@@ -3,6 +3,8 @@ import { DynamoPaginator } from '../src/lib/Entity/DynamoPaginator';
 import { Entity } from '../src/lib/Entity';
 import { prop } from '../src/lib/Decorators/prop';
 import { dynamodbDocumentClient, table } from '../src/lib/Decorators/table';
+import { hasMany, hasOne, validate } from '../src/lib/Decorators';
+import Joi from 'joi';
 
 const tableName = 'test-table';
 const onlyPkTableName = 'test-only-pk';
@@ -46,6 +48,23 @@ class ModelWithNoSecondaryKey extends Entity {
   pk: string;
 }
 
+@table(tableName)
+class ModelForTestingJSONTransforming extends Entity {
+  @validate(Joi.string().trim().required())
+  @prop({ primaryKey: true })
+  pk: string;
+
+  @validate(Joi.string().trim().required())
+  @prop({ secondaryKey: true })
+  sk: string;
+
+  @hasOne(TestModel, { required: false, nestedObject: true })
+  child: TestModel;
+
+  @hasMany(OtherModel, { required: false, nestedObject: false })
+  children: OtherModel[];
+}
+
 describe('Dynamo Entity', () => {
   afterEach(async () => {
     for (const Model of [TestModel, OtherModel, ModelWithNoSecondaryKey]) {
@@ -57,6 +76,99 @@ describe('Dynamo Entity', () => {
         await Model.deleteItem(item.attributes);
       }
     }
+  });
+
+  describe('toJSON method', () => {
+    const instance = new ModelForTestingJSONTransforming({ pk: '1', extraAttribute: '3' });
+    expect(instance.toJSON()).toStrictEqual({
+      key: {
+        pk: '1',
+        sk: undefined,
+      },
+      data: {
+        pk: '1',
+        extraAttribute: '3',
+      },
+      error: '"sk" is required',
+    });
+
+    instance.sk = '   2   ';
+    expect(instance.toJSON()).toStrictEqual({
+      key: {
+        pk: '1',
+        sk: '2',
+      },
+      data: {
+        pk: '1',
+        sk: '   2   ',
+        extraAttribute: '3',
+      },
+      validatedData: {
+        pk: '1',
+        sk: '2',
+        extraAttribute: '3',
+      },
+    });
+
+    instance.child = new TestModel({
+      pk: '3',
+      sk: '4',
+    });
+
+    expect(instance.toJSON()).toStrictEqual({
+      key: {
+        pk: '1',
+        sk: '2',
+      },
+      data: {
+        pk: '1',
+        sk: '   2   ',
+        extraAttribute: '3',
+        child: {
+          pk: '3',
+          sk: '4',
+        },
+      },
+      validatedData: {
+        pk: '1',
+        sk: '2',
+        extraAttribute: '3',
+        child: {
+          pk: '3',
+          sk: '4',
+        },
+      },
+    });
+
+    instance.children = [new OtherModel({
+      pk: '5',
+      sk: '6',
+    })];
+
+    expect(instance.toJSON()).toStrictEqual({
+      key: {
+        pk: '1',
+        sk: '2',
+      },
+      data: {
+        pk: '1',
+        sk: '   2   ',
+        extraAttribute: '3',
+        child: {
+          pk: '3',
+          sk: '4',
+        },
+      },
+      validatedData: {
+        pk: '1',
+        sk: '2',
+        extraAttribute: '3',
+        child: {
+          pk: '3',
+          sk: '4',
+        },
+      },
+    });
   });
 
   describe('Dynamodb Key', () => {

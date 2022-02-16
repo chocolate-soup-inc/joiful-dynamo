@@ -232,8 +232,13 @@ export class DynamoEntity extends BasicEntity {
    */
   get dbKey() {
     const key = {};
-    if (this._primaryKey) key[this._primaryKey] = this[this._primaryKey];
-    if (this._secondaryKey) key[this._secondaryKey] = this[this._secondaryKey];
+    if (this.valid) {
+      if (this._primaryKey) key[this._primaryKey] = this.validatedAttributes[this._primaryKey];
+      if (this._secondaryKey) key[this._secondaryKey] = this.validatedAttributes[this._secondaryKey];
+    } else {
+      if (this._primaryKey) key[this._primaryKey] = this[this._primaryKey];
+      if (this._secondaryKey) key[this._secondaryKey] = this[this._secondaryKey];
+    }
     return key;
   }
 
@@ -514,6 +519,22 @@ export class DynamoEntity extends BasicEntity {
   // ---------------- TABLE METHODS ----------------
 
   // ---------------- INSTANCE SUPPORT METHODS ----------------
+
+  toJSON() {
+    if (this.valid) {
+      return {
+        key: this.dbKey,
+        data: this.transformedAttributes,
+        validatedData: this.validatedAttributes,
+      };
+    }
+
+    return {
+      key: this.dbKey,
+      error: this.error?.message,
+      data: this.transformedAttributes,
+    };
+  }
 
   /** @internal */
   get dynamoAttributes() {
