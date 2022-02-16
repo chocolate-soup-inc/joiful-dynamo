@@ -59,6 +59,52 @@ describe('Dynamo Entity', () => {
     }
   });
 
+  describe('Dynamodb Key', () => {
+    test('It correctly returns the correct data in a model with both primary and secondary keys', () => {
+      const instance = new TestModel({ pk: '1', sk: '2', extraAttribute: '3' });
+      expect(instance.dbKey).toStrictEqual({
+        pk: '1',
+        sk: '2',
+      });
+
+      expect(instance.transformedDBKey).toStrictEqual({
+        pk: 'TestModel-1',
+        sk: 'TestModel-2',
+      });
+
+      const otherInstance = new TestModel({ pk: '1', extraAttribute: '3' });
+      expect(otherInstance.dbKey).toStrictEqual({
+        pk: '1',
+        sk: undefined,
+      });
+
+      expect(otherInstance.transformedDBKey).toStrictEqual({
+        pk: 'TestModel-1',
+        sk: undefined,
+      });
+    });
+
+    test('It correctly returns the correct data in a model with only a primary key', () => {
+      const instance = new ModelWithNoSecondaryKey({ pk: '1', sk: '2', extraAttribute: '3' });
+      expect(instance.dbKey).toStrictEqual({
+        pk: '1',
+      });
+
+      expect(instance.transformedDBKey).toStrictEqual({
+        pk: 'ModelWithNoSecondaryKey-1',
+      });
+
+      const otherInstance = new ModelWithNoSecondaryKey({ pk: '1', extraAttribute: '3' });
+      expect(otherInstance.dbKey).toStrictEqual({
+        pk: '1',
+      });
+
+      expect(otherInstance.transformedDBKey).toStrictEqual({
+        pk: 'ModelWithNoSecondaryKey-1',
+      });
+    });
+  });
+
   describe('Database integration', () => {
     describe('Scan', () => {
       test('It should return no items when there is not data in the database', async () => {

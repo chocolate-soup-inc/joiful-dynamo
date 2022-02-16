@@ -212,16 +212,35 @@ export class DynamoEntity extends BasicEntity {
   protected get primaryKeyDynamoDBValue() {
     if (this._primaryKey == null) return undefined;
 
-    return `${this._entityName}-${this[this._primaryKey]}`;
+    const currentValue = this[this._primaryKey];
+    if (currentValue == null) return undefined;
+
+    return `${this._entityName}-${currentValue}`;
   }
 
   protected get secondaryKeyDynamoDBValue() {
     if (this._secondaryKey == null) return undefined;
 
-    return `${this._entityName}-${this[this._secondaryKey]}`;
+    const currentValue = this[this._secondaryKey];
+    if (currentValue == null) return undefined;
+
+    return `${this._entityName}-${currentValue}`;
   }
 
-  protected get finalDynamoDBKey() {
+  /**
+   * Returns the dynamodb key based on the primary and secondary key without the entityName added to them.
+   */
+  get dbKey() {
+    const key = {};
+    if (this._primaryKey) key[this._primaryKey] = this[this._primaryKey];
+    if (this._secondaryKey) key[this._secondaryKey] = this[this._secondaryKey];
+    return key;
+  }
+
+  /**
+   * Returns the dynamodb key based on the primary and secondary key already with the entityName added to them.
+   */
+  get transformedDBKey() {
     const key = {};
     if (this._primaryKey) {
       key[this._primaryKey] = this.primaryKeyDynamoDBValue;
@@ -507,7 +526,7 @@ export class DynamoEntity extends BasicEntity {
     attributes._entityName = this._entityName;
     attributes = {
       ...attributes,
-      ...this.finalDynamoDBKey,
+      ...this.transformedDBKey,
     };
 
     return attributes;
@@ -680,7 +699,7 @@ export class DynamoEntity extends BasicEntity {
       Item: item,
     } = await this._dynamodb.get({
       TableName: this._tableName,
-      Key: this.finalDynamoDBKey,
+      Key: this.transformedDBKey,
     }).promise();
 
     if (item) {
@@ -861,7 +880,7 @@ export class DynamoEntity extends BasicEntity {
 
     const ret: AWS.DynamoDB.DocumentClient.Update = {
       TableName: this._tableName,
-      Key: this.finalDynamoDBKey,
+      Key: this.transformedDBKey,
       ...opts,
     };
 
