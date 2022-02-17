@@ -150,7 +150,7 @@ export function joiSchema(target: any) {
 }
 
 /** @internal */
-export function validateAttributes(target: any, item: Record<string, any>) {
+export function validateAttributes(target: any, item: Record<string, any>, _throw: boolean = true) {
   const schema = joiSchema(target);
 
   const { value, error } = schema.validate(
@@ -162,6 +162,6 @@ export function validateAttributes(target: any, item: Record<string, any>) {
     },
   );
 
-  if (error) throw error;
+  if (_throw && error) throw error;
   return value;
 }

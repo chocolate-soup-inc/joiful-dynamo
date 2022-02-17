@@ -12,6 +12,7 @@ import {
   getTableDynamoDbInstance,
   getTableName,
   getUpdatedAtKey,
+  validateAttributes,
 } from '../Decorators';
 import { getBelongsToModel, getBelongsToModels, getHasFromBelong } from '../Decorators/belongsTo';
 import { QueryOptions, ScanOptions } from '../utils/DynamoEntityTypes';
@@ -28,6 +29,7 @@ export class DynamoEntity extends BasicEntity {
     super(item);
 
     this.create = this.create.bind(this);
+    this.delete = this.delete.bind(this);
     this.update = this.update.bind(this);
     this.load = this.load.bind(this);
     this.setEntityOnKey = this.setEntityOnKey.bind(this);
@@ -83,7 +85,6 @@ export class DynamoEntity extends BasicEntity {
   // ---------------- TABLE SUPPORT METHODS ----------------
 
   protected static initialize(item: Record<string, any>) {
-    // console.log(this, item._entityName, this._entityName);
     if (item._entityName === this._entityName) {
       return new this(this.prototype.parseDynamoAttributes(item));
     }
@@ -110,7 +111,7 @@ export class DynamoEntity extends BasicEntity {
     });
   }
 
-  protected static prepareEntityAttributeNameAndValue(opts) {
+  protected prepareEntityAttributeNameAndValue(opts) {
     const newOpts = _.cloneDeep(opts);
 
     let attributeName;
@@ -143,7 +144,7 @@ export class DynamoEntity extends BasicEntity {
     };
   }
 
-  protected static prepareEntityExpression(opts, key: string) {
+  protected prepareEntityExpression(opts, key: string) {
     if (
       Object.values(opts?.ExpressionAttributeNames || {}).includes('_entityName')
       || (opts?.[key] || '').includes('_entityName')
@@ -166,12 +167,20 @@ export class DynamoEntity extends BasicEntity {
     return newOpts;
   }
 
-  protected static prepareOptsForScanAndQuery(opts) {
+  protected prepareOptsForScanAndQuery(opts) {
     return this.prepareEntityExpression(opts, 'FilterExpression');
   }
 
-  protected static prepareOptsForDelete(opts) {
+  protected static prepareOptsForScanAndQuery(opts) {
+    return this.prototype.prepareOptsForScanAndQuery(opts);
+  }
+
+  protected prepareOptsForDelete(opts) {
     return this.prepareEntityExpression(opts, 'ConditionExpression');
+  }
+
+  protected static prepareOptsForDelete(opts) {
+    return this.prototype.prepareOptsForDelete(opts);
   }
 
   protected static _query(opts: AWS.DynamoDB.QueryInput) {
@@ -183,7 +192,7 @@ export class DynamoEntity extends BasicEntity {
       opts: newOpts,
       attributeName,
       attributeValue,
-    } = this.prepareEntityAttributeNameAndValue(opts);
+    } = this.prototype.prepareEntityAttributeNameAndValue(opts);
 
     const attributeValues: string[] = [attributeValue];
 
@@ -216,10 +225,21 @@ export class DynamoEntity extends BasicEntity {
     return this._dynamodb.scan(this.prepareOptsForScanAndQuery(opts)).promise();
   }
 
+  /** @internal */
+  protected get transfomedKey() {
+    const key = {};
+    const newValue = validateAttributes(this, this.transformedAttributes, false);
+
+    if (this._primaryKey != null) key[this._primaryKey] = newValue[this._primaryKey];
+    if (this._secondaryKey != null) key[this._secondaryKey] = newValue[this._secondaryKey];
+
+    return key;
+  }
+
   protected get primaryKeyDynamoDBValue() {
     if (this._primaryKey == null) return undefined;
 
-    const currentValue = this[this._primaryKey];
+    const currentValue = this.transfomedKey[this._primaryKey];
     if (currentValue == null) return undefined;
 
     return `${this._entityName}-${currentValue}`;
@@ -228,7 +248,7 @@ export class DynamoEntity extends BasicEntity {
   protected get secondaryKeyDynamoDBValue() {
     if (this._secondaryKey == null) return undefined;
 
-    const currentValue = this[this._secondaryKey];
+    const currentValue = this.transfomedKey[this._secondaryKey];
     if (currentValue == null) return undefined;
 
     return `${this._entityName}-${currentValue}`;
@@ -238,15 +258,7 @@ export class DynamoEntity extends BasicEntity {
    * Returns the dynamodb key based on the primary and secondary key without the entityName added to them.
    */
   get dbKey() {
-    const key = {};
-    if (this.valid) {
-      if (this._primaryKey) key[this._primaryKey] = this.validatedAttributes[this._primaryKey];
-      if (this._secondaryKey) key[this._secondaryKey] = this.validatedAttributes[this._secondaryKey];
-    } else {
-      if (this._primaryKey) key[this._primaryKey] = this[this._primaryKey];
-      if (this._secondaryKey) key[this._secondaryKey] = this[this._secondaryKey];
-    }
-    return key;
+    return this.transfomedKey;
   }
 
   /**
@@ -962,6 +974,43 @@ export class DynamoEntity extends BasicEntity {
 
     if (item) this.attributes = this.parseDynamoAttributes(item);
     return this;
+  }
+
+  /**
+   * Deletes this record from the database using the <a target="_blank" href="https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/DynamoDB/DocumentClient.html#delete-property">aws-sdk documentclient delete method</a>.
+   * @remarks
+   * &nbsp;
+   * - The model primary key and secondary key are automatically converted to the pattern of how data is saved to the database.
+   * - If the record does not exist, it throws an error. If the record exists, it returns the attributes of the delete object as it is on the AWS SDK response.
+   *
+   * @example
+   * ```
+   * class Model extends Entity {
+   *   @prop({ primaryKey: true });
+   *   pk: string;
+   *
+   *   @prop({ secondaryKey: true });
+   *   sk: string;
+   * }
+   *
+   * const instance = new Model({ pk: '1', sk: '2' });
+   * await instance.delete(); // This will delete a record in the database with pk as 'Model-1' and sk as 'Model-2'.
+   * ```
+   */
+  async delete() {
+    const response = await this._dynamodb.delete(
+      this.prepareOptsForDelete({
+        TableName: this._tableName,
+        Key: this.transformedDBKey,
+        ReturnValues: 'ALL_OLD',
+      }),
+    ).promise();
+
+    if (response.Attributes == null) {
+      throw new Error('Item does not exist.');
+    }
+
+    return response.Attributes;
   }
 
   // ---------------- INSTANCE METHODS ----------------

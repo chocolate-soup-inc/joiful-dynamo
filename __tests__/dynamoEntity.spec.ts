@@ -622,6 +622,82 @@ describe('Dynamo Entity', () => {
       });
     });
 
+    describe('Instance Delete', () => {
+      test('should return error when the item is not found', async () => {
+        const instance = new TestModel({ pk: 'instance-delete-1', sk: 'instance-delete-2' });
+        await expect(instance.delete).rejects.toThrowError('The conditional request failed');
+      });
+
+      describe('When there is some data registered', () => {
+        beforeEach(async () => {
+          await dynamodbDocumentClient.batchWrite({
+            RequestItems: {
+              [tableName]: [{
+                PutRequest: {
+                  Item: {
+                    pk: 'TestModel-instance-delete-1',
+                    sk: 'TestModel-instance-delete-2',
+                    _entityName: 'TestModel',
+                  },
+                },
+              }, {
+                PutRequest: {
+                  Item: {
+                    pk: 'TestModel-instance-delete-3',
+                    sk: 'TestModel-instance-delete-4',
+                    _entityName: 'TestModel',
+                  },
+                },
+              }],
+            },
+          }).promise();
+        });
+
+        test('It should return the deleted item attributes', async () => {
+          const instance = new TestModel({ pk: 'instance-delete-1', sk: 'instance-delete-2' });
+          const response = await instance.delete();
+
+          expect(response).toEqual({
+            pk: 'TestModel-instance-delete-1',
+            sk: 'TestModel-instance-delete-2',
+            _entityName: 'TestModel',
+          });
+        });
+
+        test('It should effectivelly delete the item in the database', async () => {
+          const scanOptions = {
+            FilterExpression: 'begins_with(pk, :v)',
+            ExpressionAttributeValues: {
+              ':v': 'TestModel-instance-delete',
+            },
+          };
+          const { items: beforeDeleteItems } = await TestModel.scanAll(scanOptions);
+          expect(beforeDeleteItems).toHaveLength(2);
+
+          const instance = new TestModel({ pk: 'instance-delete-1', sk: 'instance-delete-2' });
+          await instance.delete();
+
+          const { items: afterDeleteItems } = await TestModel.scanAll(scanOptions);
+          expect(afterDeleteItems).toHaveLength(1);
+        });
+
+        test('It should delete only from the correct model', async () => {
+          const otherModel = new OtherModel({
+            pk: 'instance-delete-3',
+            sk: 'instance-delete-4',
+          });
+          await expect(otherModel.delete()).rejects.toThrowError('The conditional request failed');
+
+          const testModel = new TestModel({
+            pk: 'instance-delete-3',
+            sk: 'instance-delete-4',
+          });
+
+          await expect(testModel.delete()).resolves.not.toThrow('The conditional request failed');
+        });
+      });
+    });
+
     describe('Instance Load', () => {
       test('It should throw an error if nothing is found', async () => {
         const instance = new TestModel({
