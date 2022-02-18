@@ -8,6 +8,7 @@ import {
   RelationDescriptors,
   RelationModel,
   HasRelationOptions,
+  addForeignKey,
 } from './relationHelpers';
 import { setPropGettersAndSetters } from './prop';
 import { setBelongsTo } from './belongsTo';
@@ -230,6 +231,7 @@ export function hasOne(ChildModel: Constructor, opts?: HasRelationOptions) {
     Reflect.defineMetadata(relationDescriptor, modelProperties, target);
 
     if (opts?.foreignKey) {
+      addForeignKey(target, opts?.foreignKey);
       setPropGettersAndSetters(target, opts?.foreignKey);
     }
 

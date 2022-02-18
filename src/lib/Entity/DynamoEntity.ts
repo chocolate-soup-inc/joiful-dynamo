@@ -15,6 +15,7 @@ import {
   validateAttributes,
 } from '../Decorators';
 import { getBelongsToModel, getBelongsToModels, getHasFromBelong } from '../Decorators/belongsTo';
+import { getForeignKeys } from '../Decorators/relationHelpers';
 import { QueryOptions, ScanOptions } from '../utils/DynamoEntityTypes';
 import { BasicEntity } from './BasicEntity';
 import { DynamoPaginator } from './DynamoPaginator';
@@ -569,6 +570,11 @@ export class DynamoEntity extends BasicEntity {
       ...this.transformedDBKey,
     };
 
+    for (const key of getForeignKeys(this)) {
+      this[key] = this.primaryKeyDynamoDBValue;
+      attributes[key] = this.primaryKeyDynamoDBValue;
+    }
+
     return attributes;
   }
 
@@ -764,7 +770,6 @@ export class DynamoEntity extends BasicEntity {
       const value = this[m];
       if (foreignKey && this._primaryKey) {
         value[foreignKey] = this.primaryKeyDynamoDBValue;
-        this[foreignKey] = this.primaryKeyDynamoDBValue;
       }
 
       return agg.concat([value]);
@@ -784,7 +789,6 @@ export class DynamoEntity extends BasicEntity {
         value = value.map((v) => {
           if (this._primaryKey) {
             v[foreignKey] = this.primaryKeyDynamoDBValue;
-            this[foreignKey] = this.primaryKeyDynamoDBValue;
           }
           return v;
         });

@@ -94,7 +94,7 @@ describe('Dynamo Entity Relations', () => {
 
       expect(parentItems).toHaveLength(1);
       expect(childItems).toHaveLength(0);
-      expect(parentItems[0]._fk).toBeUndefined();
+      expect(parentItems[0]._fk).toEqual('ParentModel-1');
     });
 
     test('When the child is present, both items are added to the database', async () => {
@@ -369,7 +369,7 @@ describe('Dynamo Entity Relations', () => {
 
       expect(parentItems).toHaveLength(1);
       expect(childItems).toHaveLength(0);
-      expect(parentItems[0]._fk).toBeUndefined();
+      expect(parentItems[0]._fk).toEqual('ParentModel-1');
     });
   });
 

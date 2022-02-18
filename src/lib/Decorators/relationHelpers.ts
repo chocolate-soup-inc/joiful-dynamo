@@ -1,3 +1,17 @@
+import 'reflect-metadata';
+
+export const foreignKeysMetadataKey = 'foreignKeys';
+
+export function getForeignKeys(target) {
+  return Reflect.getMetadata(foreignKeysMetadataKey, target) || [];
+}
+
+export function addForeignKey(target, foreignKey) {
+  const currentKeys = getForeignKeys(target);
+  if (!currentKeys.includes(foreignKey)) currentKeys.push(foreignKey);
+  Reflect.defineMetadata(foreignKeysMetadataKey, currentKeys, target);
+}
+
 export type Constructor = { new(...args: any[]) };
 
 export type HasRelationOptions = {

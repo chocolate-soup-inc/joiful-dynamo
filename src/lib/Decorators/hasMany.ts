@@ -7,6 +7,7 @@ import {
   RelationDescriptors,
   RelationModel,
   HasRelationOptions,
+  addForeignKey,
 } from './relationHelpers';
 import { setPropGettersAndSetters } from './prop';
 import { setBelongsTo } from './belongsTo';
@@ -194,6 +195,7 @@ export function hasMany(ChildModel: Constructor, opts?: HasRelationOptions) {
     }, target, `_hasMany_${ChildModel.name}`);
 
     if (opts?.foreignKey) {
+      addForeignKey(target, opts?.foreignKey);
       setPropGettersAndSetters(target, opts?.foreignKey);
     }
 
