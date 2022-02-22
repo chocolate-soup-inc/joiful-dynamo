@@ -67,21 +67,50 @@ export class BasicEntity {
   }
 
   /**
+   * Gets the available properties list.
+   */
+  get propertyList(): string[] {
+    let properties = Object.keys(this.constructor.prototype) || [];
+
+    // eslint-disable-next-line no-prototype-builtins
+    if (BasicEntity.prototype.isPrototypeOf(this.constructor.prototype)) {
+      const Model: typeof BasicEntity = Object.getPrototypeOf(this);
+      properties = properties.concat(Model.propertyList);
+    }
+
+    return properties;
+  }
+
+  /**
+   * Gets the available properties list.
+   */
+  static get propertyList(): string[] {
+    return this.prototype.propertyList;
+  }
+
+  /**
    * Gets the available attribute list and its aliases.
    */
-  static get attributeList(): string[] {
-    const properties = Object.keys(this.prototype);
+  get attributeList(): string[] {
+    const properties = this.propertyList;
 
     const aliases = properties.reduce((agg, item) => {
-      return agg.concat(getAliasesForProperty(this.prototype, item));
+      return agg.concat(getAliasesForProperty(this.constructor.prototype, item));
     }, [] as string[]);
 
     return properties.concat(aliases).sort((a, b) => a.localeCompare(b));
   }
 
+  /**
+   * Gets the available attribute list and its aliases.
+   */
+  static get attributeList(): string[] {
+    return this.prototype.attributeList;
+  }
+
   /** @internal */
   get enumerableAttributes(): Record<string, any> {
-    return Object.keys(this.constructor.prototype).reduce((agg, key) => {
+    return this.propertyList.reduce((agg, key) => {
       let value;
       if (this.relatedNotNestedModels.includes(key)) {
         value = this[`_noInitializer${_.capitalize(key)}`];

@@ -1,7 +1,6 @@
 import 'reflect-metadata';
 import _ from 'lodash';
 import Joi from 'joi';
-import { getAliasesMap } from './aliases';
 import {
   Constructor,
   relationDescriptor,
@@ -101,13 +100,8 @@ export function setHasOneDescriptor(
 }
 
 /** @internal */
-export function setHasOnePropertiesDescriptor(target: any, modelName: string, ChildModel: Constructor) {
-  const propDescriptors = Object.keys(ChildModel.prototype);
-  const aliasDescriptors = Object.keys(getAliasesMap(ChildModel.prototype));
-
-  const descriptors = propDescriptors.concat(aliasDescriptors);
-
-  descriptors.forEach((key) => {
+export function setHasOnePropertiesDescriptor(target: any, modelName: string, ChildModel: any) {
+  ChildModel.attributeList.forEach((key) => {
     const propertyKey = `${modelName}${_.capitalize(key)}`;
 
     Object.defineProperty(target, propertyKey, {
