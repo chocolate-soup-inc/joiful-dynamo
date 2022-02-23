@@ -53,7 +53,9 @@ export class BasicEntity {
     });
 
     for (const [key, value] of entries) {
-      setPropGettersAndSetters(this.constructor.prototype, key);
+      if (!this.attributeList.includes(key)) {
+        setPropGettersAndSetters(this.constructor.prototype, key);
+      }
       this[key] = value;
     }
   }
