@@ -22,6 +22,21 @@ class ChildModel extends Entity {
 }
 
 @table(tableName)
+class ChildModel2 extends Entity {
+  @prop({ primaryKey: true })
+  pk: string;
+
+  @prop({ secondaryKey: true })
+  sk: string;
+
+  @prop()
+  name: string;
+
+  @prop()
+  _fk: string;
+}
+
+@table(tableName)
 class ParentModel extends Entity {
   @prop({ primaryKey: true })
   pk: string;
@@ -41,6 +56,11 @@ class ParentModel extends Entity {
     nestedObject: false, foreignKey: '_fk', indexName: 'byFK', parentPropertyOnChild: 'parent2',
   })
   children: ChildModel[];
+
+  @hasMany(ChildModel2, {
+    nestedObject: false, foreignKey: '_fk', indexName: 'byFK', parentPropertyOnChild: 'parent',
+  })
+  children2: ChildModel2[];
 }
 
 describe('Dynamo Entity Relations', () => {

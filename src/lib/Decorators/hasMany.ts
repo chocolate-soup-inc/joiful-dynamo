@@ -177,7 +177,7 @@ export function hasMany(ChildModel: Constructor, opts?: HasRelationOptions) {
       opts,
     }, target, propertyKey);
 
-    const modelProperties: RelationDescriptors = Reflect.getMetadata(relationDescriptor, target, ChildModel.name) || [];
+    const modelProperties: RelationDescriptors = Reflect.getMetadata(relationDescriptor, target) || [];
 
     modelProperties.push({
       model: ChildModel,
