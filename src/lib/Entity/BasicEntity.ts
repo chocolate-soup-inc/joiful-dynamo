@@ -61,11 +61,18 @@ export class BasicEntity {
   }
 
   protected getAttribute(key: string): any {
+    if (this.relatedModels.includes(key)) {
+      return this[key];
+    }
     return this.attributes[key];
   }
 
   protected setAttribute(key: string, value: any): void {
-    this.attributes[key] = value;
+    if (this.relatedModels.includes(key)) {
+      this[key] = value;
+    } else {
+      this.attributes[key] = value;
+    }
   }
 
   /**
@@ -150,6 +157,10 @@ export class BasicEntity {
   // ---------------- BASIC ATTRIBUTES SETTINGS ----------------
 
   // ---------------- VALIDATION SUPPORT SETTINGS ----------------
+
+  protected get relatedModels() {
+    return (getHasOneModels(this) || []).concat(getHasManyModels(this) || []);
+  }
 
   protected get relatedNotNestedModels() {
     return getHasOneNotNestedModels(this).concat(getHasManyNotNestedModels(this));

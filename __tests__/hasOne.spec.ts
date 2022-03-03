@@ -25,6 +25,7 @@ class TestModel extends Entity {
   sk: number;
 
   @hasOne(ChildModel, { nestedObject: true })
+  @aliases(['childAlias'])
   childProperty: ChildModel;
 
   @hasOne(ChildModel, { required: true, nestedObject: true })
@@ -61,6 +62,32 @@ describe('Has one', () => {
     expect(model.childProperty.sk).toEqual('2');
     model.childPropertyAlias1 = '3';
     expect(model.childProperty.pk).toEqual('3');
+  });
+
+  test('it should work correctly with aliases', () => {
+    const model = new TestModel({ pk: 1, sk: 2 });
+
+    expect(model.childAlias).toBeInstanceOf(ChildModel);
+    expect(model.childAlias.attributes).toStrictEqual({});
+    expect(model.childProperty).toBeInstanceOf(ChildModel);
+    expect(model.childProperty.attributes).toStrictEqual({});
+
+    model.childAlias = {
+      pk: 'child-1',
+      sk: 'child-1',
+    };
+
+    expect(model.childAlias).toBeInstanceOf(ChildModel);
+    expect(model.childAlias.attributes).toStrictEqual({
+      pk: 'child-1',
+      sk: 'child-1',
+    });
+
+    expect(model.childProperty).toBeInstanceOf(ChildModel);
+    expect(model.childProperty.attributes).toStrictEqual({
+      pk: 'child-1',
+      sk: 'child-1',
+    });
   });
 
   // test('should not let to assign the child property to not valid values', () => {

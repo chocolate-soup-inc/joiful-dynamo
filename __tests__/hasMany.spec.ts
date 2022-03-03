@@ -25,6 +25,7 @@ class TestModel extends Entity {
   sk: number;
 
   @hasMany(ChildModel, { nestedObject: true })
+  @aliases(['childrenAlias'])
   childrenProperty: ChildModel[];
 
   @hasMany(ChildModel, { required: true, nestedObject: true, parentPropertyOnChild: 'parent' })
@@ -65,6 +66,22 @@ describe('Has many', () => {
     expect(model.childrenProperty).toHaveLength(2);
     expect(model.childrenProperty[0]).toBeInstanceOf(ChildModel);
     expect(model.childrenProperty[1]).toBeInstanceOf(ChildModel);
+  });
+
+  test('it should work correctly with aliases', () => {
+    const model = new TestModel({ pk: 1, sk: 2 });
+
+    expect(model.childrenProperty).toEqual([]);
+    expect(model.childrenAlias).toEqual([]);
+    model.childrenAlias = [new ChildModel({
+      pk: 'child-1',
+      sk: 'child-1',
+    })];
+
+    expect(model.childrenAlias).toHaveLength(1);
+    expect(model.childrenAlias[0]).toBeInstanceOf(ChildModel);
+    expect(model.childrenProperty).toHaveLength(1);
+    expect(model.childrenProperty[0]).toBeInstanceOf(ChildModel);
   });
 
   test('should let children properties to be initialized', () => {
