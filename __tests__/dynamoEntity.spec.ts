@@ -1187,7 +1187,7 @@ describe('Dynamo Entity', () => {
       expect(model._fk).toEqual('2');
       expect(model.transformedDBKey).toStrictEqual({
         pk: 'ModelWithForeignSecondaryKey-1',
-        _fk: 'ModelWithForeignSecondaryKey-1',
+        _fk: '2',
       });
     });
   });

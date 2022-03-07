@@ -266,20 +266,21 @@ export class DynamoEntity extends BasicEntity {
    * Returns the dynamodb key based on the primary and secondary key already with the entityName added to them.
    */
   get transformedDBKey() {
+    const key: Record<string, any> = {};
+
     for (const fk of getForeignKeys(this)) {
       if (fk === this._primaryKey || fk === this._secondaryKey) {
         if (this._primaryKey != null) {
-          this[fk] = this.transfomedKey[this._primaryKey];
+          key[fk] = this[fk] || this.primaryKeyDynamoDBValue;
         }
       }
     }
 
-    const key = {};
-    if (this._primaryKey) {
+    if (this._primaryKey && key[this._primaryKey] == null) {
       key[this._primaryKey] = this.primaryKeyDynamoDBValue;
     }
 
-    if (this._secondaryKey) {
+    if (this._secondaryKey && key[this._secondaryKey] == null) {
       key[this._secondaryKey] = this.secondaryKeyDynamoDBValue;
     }
 
