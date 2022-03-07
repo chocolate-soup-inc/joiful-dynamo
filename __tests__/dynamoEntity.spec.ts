@@ -8,6 +8,7 @@ import { hasMany, hasOne, validate } from '../src/lib/Decorators';
 
 const tableName = 'test-table';
 const onlyPkTableName = 'test-only-pk';
+const foreignSkTableName = 'test-foreign-sk';
 
 @table(tableName)
 class TestModel extends Entity {
@@ -63,6 +64,18 @@ class ModelForTestingJSONTransforming extends Entity {
 
   @hasMany(OtherModel, { required: false, nestedObject: false })
   children: OtherModel[];
+}
+
+@table(foreignSkTableName)
+class ModelWithForeignSecondaryKey extends Entity {
+  @prop({ primaryKey: true })
+  pk: string;
+
+  @prop({ secondaryKey: true })
+  _fk: string;
+
+  @hasOne(TestModel, { nestedObject: false, indexName: 'test-index-name', foreignKey: '_fk' })
+  child: TestModel;
 }
 
 describe('Dynamo Entity', () => {
@@ -1139,6 +1152,43 @@ describe('Dynamo Entity', () => {
       });
 
       expect(newInstance.extraAttribute).toEqual('new-extra');
+    });
+  });
+
+  describe('Testing a model where the secondary key is a foreign key', () => {
+    test('It should correctly set the secondary key equal to the primary key', async () => {
+      const model = new ModelWithForeignSecondaryKey({
+        pk: '1',
+      });
+
+      expect(model._fk).toBeUndefined();
+      expect(model.transformedDBKey).toStrictEqual({
+        pk: 'ModelWithForeignSecondaryKey-1',
+        _fk: 'ModelWithForeignSecondaryKey-1',
+      });
+    });
+
+    test('It keeps it null when it is blank', () => {
+      const model = new ModelWithForeignSecondaryKey();
+
+      expect(model._fk).toBeUndefined();
+      expect(model.transformedDBKey).toStrictEqual({
+        pk: undefined,
+        _fk: undefined,
+      });
+    });
+
+    test('It does overrides the value if something is set', () => {
+      const model = new ModelWithForeignSecondaryKey({
+        pk: '1',
+        _fk: '2',
+      });
+
+      expect(model._fk).toEqual('2');
+      expect(model.transformedDBKey).toStrictEqual({
+        pk: 'ModelWithForeignSecondaryKey-1',
+        _fk: 'ModelWithForeignSecondaryKey-1',
+      });
     });
   });
 });
