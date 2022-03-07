@@ -33,7 +33,6 @@ export class DynamoEntity extends BasicEntity {
     this.delete = this.delete.bind(this);
     this.update = this.update.bind(this);
     this.load = this.load.bind(this);
-    this.setEntityOnKey = this.setEntityOnKey.bind(this);
     this.removeEntityFromKey = this.removeEntityFromKey.bind(this);
   }
 
@@ -291,22 +290,8 @@ export class DynamoEntity extends BasicEntity {
     return key;
   }
 
-  protected setEntityOnKey(key: AWS.DynamoDB.DocumentClient.Key): AWS.DynamoDB.DocumentClient.Key {
-    const finalKey: AWS.DynamoDB.DocumentClient.Key = {};
-    [this._primaryKey, this._secondaryKey].forEach((_key) => {
-      if (_key != null) {
-        const value = key[_key];
-        if (value != null) {
-          finalKey[_key] = `${this._entityName}-${value}`;
-        }
-      }
-    });
-
-    return finalKey;
-  }
-
-  protected static setEntityOnKey(key: AWS.DynamoDB.DocumentClient.Key) {
-    return this.prototype.setEntityOnKey(key);
+  protected static transformedDBKey(key: AWS.DynamoDB.DocumentClient.Key) {
+    return new this(key).transformedDBKey;
   }
 
   protected removeEntityFromKey(key: AWS.DynamoDB.DocumentClient.Key): AWS.DynamoDB.DocumentClient.Key {
@@ -355,7 +340,7 @@ export class DynamoEntity extends BasicEntity {
     const response = await this._dynamodb.delete(
       this.prepareOptsForDelete({
         TableName: this._tableName,
-        Key: this.setEntityOnKey(key),
+        Key: this.transformedDBKey(key),
         ReturnValues: 'ALL_OLD',
       }),
     ).promise();
@@ -392,7 +377,7 @@ export class DynamoEntity extends BasicEntity {
   static async getItem(key: AWS.DynamoDB.DocumentClient.Key, includeRelated = false) {
     const response = await this._dynamodb.get({
       TableName: this._tableName,
-      Key: this.setEntityOnKey(key),
+      Key: this.transformedDBKey(key),
     }).promise();
 
     const {
