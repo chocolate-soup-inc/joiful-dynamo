@@ -271,7 +271,7 @@ export class DynamoEntity extends BasicEntity {
     for (const fk of getForeignKeys(this)) {
       if (fk === this._primaryKey || fk === this._secondaryKey) {
         if (this._primaryKey != null) {
-          key[fk] = this[fk] || this.primaryKeyDynamoDBValue;
+          key[fk] = this.primaryKeyDynamoDBValue;
         }
       }
     }
