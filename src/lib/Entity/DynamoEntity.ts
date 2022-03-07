@@ -15,7 +15,7 @@ import {
   validateAttributes,
 } from '../Decorators';
 import { getBelongsToModel, getBelongsToModels, getHasFromBelong } from '../Decorators/belongsTo';
-import { getForeignKeys } from '../Decorators/relationHelpers';
+import { getChildForeignKeys, getForeignKeys } from '../Decorators/relationHelpers';
 import { QueryOptions, ScanOptions } from '../utils/DynamoEntityTypes';
 import { BasicEntity } from './BasicEntity';
 import { DynamoPaginator } from './DynamoPaginator';
@@ -268,20 +268,24 @@ export class DynamoEntity extends BasicEntity {
   get transformedDBKey() {
     const key: Record<string, any> = {};
 
-    for (const fk of getForeignKeys(this)) {
-      if (fk === this._primaryKey || fk === this._secondaryKey) {
-        if (this._primaryKey != null) {
-          key[fk] = this.primaryKeyDynamoDBValue;
-        }
+    if (this._secondaryKey != null && getForeignKeys(this).includes(this._secondaryKey)) {
+      key[this._secondaryKey] = this.primaryKeyDynamoDBValue;
+    }
+
+    if (this._primaryKey) {
+      if (getChildForeignKeys(this).includes(this._primaryKey)) {
+        key[this._primaryKey] = this.transfomedKey[this._primaryKey];
+      } else {
+        key[this._primaryKey] = this.primaryKeyDynamoDBValue;
       }
     }
 
-    if (this._primaryKey && key[this._primaryKey] == null) {
-      key[this._primaryKey] = this.primaryKeyDynamoDBValue;
-    }
-
     if (this._secondaryKey && key[this._secondaryKey] == null) {
-      key[this._secondaryKey] = this.secondaryKeyDynamoDBValue;
+      if (getChildForeignKeys(this).includes(this._secondaryKey)) {
+        key[this._secondaryKey] = this.transfomedKey[this._secondaryKey];
+      } else {
+        key[this._secondaryKey] = this.secondaryKeyDynamoDBValue;
+      }
     }
 
     return key;
@@ -580,7 +584,6 @@ export class DynamoEntity extends BasicEntity {
     };
 
     for (const key of getForeignKeys(this)) {
-      this[key] = this.primaryKeyDynamoDBValue;
       attributes[key] = this.primaryKeyDynamoDBValue;
     }
 
