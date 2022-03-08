@@ -67,6 +67,14 @@ class ModelForTestingJSONTransforming extends Entity {
 }
 
 @table(foreignSkTableName)
+class ChildWithForeignSecondaryKey extends Entity {
+  @prop({ primaryKey: true })
+  pk: string;
+
+  @prop({ secondaryKey: true })
+  _fk: string;
+}
+@table(foreignSkTableName)
 class ModelWithForeignSecondaryKey extends Entity {
   @prop({ primaryKey: true })
   pk: string;
@@ -74,8 +82,8 @@ class ModelWithForeignSecondaryKey extends Entity {
   @prop({ secondaryKey: true })
   _fk: string;
 
-  @hasOne(TestModel, { nestedObject: false, indexName: 'test-index-name', foreignKey: '_fk' })
-  child: TestModel;
+  @hasOne(ChildWithForeignSecondaryKey, { nestedObject: false, indexName: 'test-index-name', foreignKey: '_fk' })
+  child: ChildWithForeignSecondaryKey;
 }
 
 describe('Dynamo Entity', () => {
@@ -1188,6 +1196,19 @@ describe('Dynamo Entity', () => {
       expect(model.transformedDBKey).toStrictEqual({
         pk: 'ModelWithForeignSecondaryKey-1',
         _fk: 'ModelWithForeignSecondaryKey-1',
+      });
+    });
+
+    test('It correctly sets the secondary key when belonging to another model', () => {
+      const model = new ChildWithForeignSecondaryKey({
+        pk: '1',
+        _fk: '2',
+      });
+
+      expect(model._fk).toEqual('2');
+      expect(model.transformedDBKey).toStrictEqual({
+        pk: 'ChildWithForeignSecondaryKey-1',
+        _fk: 'ModelWithForeignSecondaryKey-2',
       });
     });
   });

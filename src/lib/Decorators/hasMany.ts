@@ -8,7 +8,7 @@ import {
   RelationModel,
   HasRelationOptions,
   addForeignKey,
-  addChildForeignKey,
+  addParentForeignKey,
 } from './relationHelpers';
 import { setPropGettersAndSetters } from './prop';
 import { setBelongsTo } from './belongsTo';
@@ -197,7 +197,7 @@ export function hasMany(ChildModel: Constructor, opts?: HasRelationOptions) {
 
     if (opts?.foreignKey) {
       addForeignKey(target, opts?.foreignKey);
-      addChildForeignKey(ChildModel.prototype, opts?.foreignKey);
+      addParentForeignKey(ChildModel.prototype, opts?.foreignKey, target._entityName);
       setPropGettersAndSetters(target, opts?.foreignKey);
     }
 

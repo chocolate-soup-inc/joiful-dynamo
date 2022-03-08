@@ -63,6 +63,24 @@ class ParentModel extends Entity {
   children2: ChildModel2[];
 }
 
+// @table(tableName)
+// class ChildModelWithSecondaryForeignKey extends Entity {
+//   @prop({ primaryKey: true })
+//   pk: string;
+
+//   @prop({ secondaryKey: true })
+//   sk: string;
+// }
+
+// @table(tableName)
+// class ParentModelWithSecondaryForeignKey extends Entity {
+//   @prop({ primaryKey: true })
+//   pk: string;
+
+//   @prop({ secondaryKey: true })
+//   sk: string;
+// }
+
 describe('Dynamo Entity Relations', () => {
   afterEach(async () => {
     const {
