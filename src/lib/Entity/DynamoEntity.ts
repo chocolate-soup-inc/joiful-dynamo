@@ -183,11 +183,23 @@ export class DynamoEntity extends BasicEntity {
     return this.prototype.prepareOptsForDelete(opts);
   }
 
-  protected static _query(opts: AWS.DynamoDB.QueryInput) {
-    return this._dynamodb.query(this.prepareOptsForScanAndQuery(opts)).promise();
+  protected static async _query(opts: AWS.DynamoDB.QueryInput) {
+    const queryParams = this.prepareOptsForScanAndQuery(opts);
+
+    if (process.env.JOIFUL_DYNAMO_DEBUG) {
+      console.log('QUERY PARAMS', queryParams);
+    }
+
+    const response = await this._dynamodb.query(queryParams).promise();
+
+    if (process.env.JOIFUL_DYNAMO_DEBUG) {
+      console.log('QUERY RESPONSE', queryParams);
+    }
+
+    return response;
   }
 
-  protected static _queryWithChildrenRecords(opts: AWS.DynamoDB.QueryInput) {
+  protected static async _queryWithChildrenRecords(opts: AWS.DynamoDB.QueryInput) {
     const {
       opts: newOpts,
       attributeName,
@@ -218,11 +230,33 @@ export class DynamoEntity extends BasicEntity {
       newOpts.FilterExpression = customFilter;
     }
 
-    return this._dynamodb.query(newOpts).promise();
+    if (process.env.JOIFUL_DYNAMO_DEBUG) {
+      console.log('QUERY RELATED PARAMS', newOpts);
+    }
+
+    const response = await this._dynamodb.query(newOpts).promise();
+
+    if (process.env.JOIFUL_DYNAMO_DEBUG) {
+      console.log('QUERY RELATED RESPONSE', response);
+    }
+
+    return response;
   }
 
-  protected static _scan(opts: AWS.DynamoDB.ScanInput) {
-    return this._dynamodb.scan(this.prepareOptsForScanAndQuery(opts)).promise();
+  protected static async _scan(opts: AWS.DynamoDB.ScanInput) {
+    const scanOpts = this.prepareOptsForScanAndQuery(opts);
+
+    if (process.env.JOIFUL_DYNAMO_DEBUG) {
+      console.log('SCAN PARAMS', scanOpts);
+    }
+
+    const response = await this._dynamodb.scan(scanOpts).promise();
+
+    if (process.env.JOIFUL_DYNAMO_DEBUG) {
+      console.log('SCAN RESPONSE', response);
+    }
+
+    return response;
   }
 
   /** @internal */
@@ -339,13 +373,21 @@ export class DynamoEntity extends BasicEntity {
    * ```
    */
   static async deleteItem(key: AWS.DynamoDB.DocumentClient.Key) {
-    const response = await this._dynamodb.delete(
-      this.prepareOptsForDelete({
-        TableName: this._tableName,
-        Key: this.transformedDBKey(key),
-        ReturnValues: 'ALL_OLD',
-      }),
-    ).promise();
+    const deleteParams = this.prepareOptsForDelete({
+      TableName: this._tableName,
+      Key: this.transformedDBKey(key),
+      ReturnValues: 'ALL_OLD',
+    });
+
+    if (process.env.JOIFUL_DYNAMO_DEBUG) {
+      console.log('DELETE PARAMS', deleteParams);
+    }
+
+    const response = await this._dynamodb.delete(deleteParams).promise();
+
+    if (process.env.JOIFUL_DYNAMO_DEBUG) {
+      console.log('DELETE RESPONSE', response);
+    }
 
     if (response.Attributes == null) {
       throw new Error('Item does not exist.');
@@ -377,10 +419,20 @@ export class DynamoEntity extends BasicEntity {
    * ```
    */
   static async getItem(key: AWS.DynamoDB.DocumentClient.Key, includeRelated = false) {
-    const response = await this._dynamodb.get({
+    const getParams = {
       TableName: this._tableName,
       Key: this.transformedDBKey(key),
-    }).promise();
+    };
+
+    if (process.env.JOIFUL_DYNAMO_DEBUG) {
+      console.log('GET PARAMS', getParams);
+    }
+
+    const response = await this._dynamodb.get(getParams).promise();
+
+    if (process.env.JOIFUL_DYNAMO_DEBUG) {
+      console.log('GET RESPONSE', response);
+    }
 
     const {
       Item: item,
@@ -740,12 +792,24 @@ export class DynamoEntity extends BasicEntity {
       throw new Error('primary key and/or secondary key props not set');
     }
 
-    const {
-      Item: item,
-    } = await this._dynamodb.get({
+    const loadParams = {
       TableName: this._tableName,
       Key: this.transformedDBKey,
-    }).promise();
+    };
+
+    if (process.env.JOIFUL_DYNAMO_DEBUG) {
+      console.log('LOAD PARAMS', loadParams);
+    }
+
+    const response = await this._dynamodb.get(loadParams).promise();
+
+    if (process.env.JOIFUL_DYNAMO_DEBUG) {
+      console.log('LOAD RESPONSE', response);
+    }
+
+    const {
+      Item: item,
+    } = response;
 
     if (item) {
       this.attributes = this.parseDynamoAttributes(item);
@@ -857,9 +921,19 @@ export class DynamoEntity extends BasicEntity {
       ...relAttributes,
     ];
 
-    await this._dynamodb.transactWrite({
+    const createParams = {
       TransactItems: transactItems,
-    }).promise();
+    };
+
+    if (process.env.JOIFUL_DYNAMO_DEBUG) {
+      console.log('CREATE PARAMS', createParams);
+    }
+
+    const response = await this._dynamodb.transactWrite(createParams).promise();
+
+    if (process.env.JOIFUL_DYNAMO_DEBUG) {
+      console.log('CREATE RESPONSE', response);
+    }
 
     this.attributes = this.parseDynamoAttributes(attributes.Item);
     return this;
@@ -964,16 +1038,38 @@ export class DynamoEntity extends BasicEntity {
       ...relAttributes,
     ];
 
-    await this._dynamodb.transactWrite({
+    const updateParams = {
       TransactItems: transactItems,
-    }).promise();
+    };
+
+    if (process.env.JOIFUL_DYNAMO_DEBUG) {
+      console.log('UPDATE PARAMS', updateParams);
+    }
+
+    const response = await this._dynamodb.transactWrite(updateParams).promise();
+
+    if (process.env.JOIFUL_DYNAMO_DEBUG) {
+      console.log('UPDATE RESPONSE', response);
+    }
+
+    const getParams = {
+      TableName: attributes.TableName,
+      Key: attributes.Key,
+    };
+
+    if (process.env.JOIFUL_DYNAMO_DEBUG) {
+      console.log('GET PARAMS', getParams);
+    }
+
+    const getResponse = await this._dynamodb.get(getParams).promise();
+
+    if (process.env.JOIFUL_DYNAMO_DEBUG) {
+      console.log('GET RESPONSE', getResponse);
+    }
 
     const {
       Item: item,
-    } = await this._dynamodb.get({
-      TableName: attributes.TableName,
-      Key: attributes.Key,
-    }).promise();
+    } = getResponse;
 
     if (item) this.attributes = this.parseDynamoAttributes(item);
     return this;
@@ -1001,13 +1097,21 @@ export class DynamoEntity extends BasicEntity {
    * ```
    */
   async delete() {
-    const response = await this._dynamodb.delete(
-      this.prepareOptsForDelete({
-        TableName: this._tableName,
-        Key: this.transformedDBKey,
-        ReturnValues: 'ALL_OLD',
-      }),
-    ).promise();
+    const deleteParams = this.prepareOptsForDelete({
+      TableName: this._tableName,
+      Key: this.transformedDBKey,
+      ReturnValues: 'ALL_OLD',
+    });
+
+    if (process.env.JOIFUL_DYNAMO_DEBUG) {
+      console.log('DELETE PARAMS', deleteParams);
+    }
+
+    const response = await this._dynamodb.delete(deleteParams).promise();
+
+    if (process.env.JOIFUL_DYNAMO_DEBUG) {
+      console.log('DELETE RESPONSE', response);
+    }
 
     if (response.Attributes == null) {
       throw new Error('Item does not exist.');
