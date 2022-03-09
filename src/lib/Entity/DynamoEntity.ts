@@ -686,33 +686,33 @@ export class DynamoEntity extends BasicEntity {
             KeyConditionExpression: '#_fk = :_fk',
           });
 
-          if (parentPropertyOnChild) {
+          if (parentPropertyOnChild && type !== 'belongsTo') {
             items.forEach((item) => {
               item[parentPropertyOnChild] = this;
             });
+          }
 
-            if (type === 'hasMany') {
-              this[modelName] = items;
-            } else if (type === 'hasOne') {
-              // eslint-disable-next-line prefer-destructuring
-              this[modelName] = items[0];
-            } else if (type === 'belongsTo') {
-              const {
-                propertyKey,
-                type: parentType,
-              } = getHasFromBelong(this, foreignKey, indexName, parentPropertyOnChild) || {};
+          if (type === 'hasMany') {
+            this[modelName] = items;
+          } else if (type === 'hasOne') {
+            // eslint-disable-next-line prefer-destructuring
+            this[modelName] = items[0];
+          } else if (type === 'belongsTo') {
+            const {
+              propertyKey,
+              type: parentType,
+            } = getHasFromBelong(this, foreignKey, indexName, parentPropertyOnChild) || {};
 
-              for (const parent of items) {
-                if (propertyKey) {
-                  if (parentType === 'hasOne') {
-                    parent[propertyKey] = this;
-                  } else if (parentType === 'hasMany') {
-                    parent[propertyKey] = [this];
-                  }
+            for (const parent of items) {
+              if (propertyKey) {
+                if (parentType === 'hasOne') {
+                  parent[propertyKey] = this;
+                } else if (parentType === 'hasMany') {
+                  parent[propertyKey] = [this];
                 }
-
-                this[modelName] = parent;
               }
+
+              this[modelName] = parent;
             }
           }
         }
