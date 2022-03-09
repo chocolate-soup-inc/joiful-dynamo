@@ -642,118 +642,80 @@ export class DynamoEntity extends BasicEntity {
 
   /** @internal */
   async queryRelated() {
-    const hasManyNotNestedModels = getHasManyNotNestedModels(this);
+    for (const { listMethod, itemMethod, type } of [{
+      listMethod: getHasManyNotNestedModels,
+      itemMethod: getHasManyModel,
+      type: 'hasMany',
+    }, {
+      listMethod: getHasOneNotNestedModels,
+      itemMethod: getHasOneModel,
+      type: 'hasOne',
+    }, {
+      listMethod: getBelongsToModels,
+      itemMethod: getBelongsToModel,
+      type: 'belongsTo',
+    }]) {
+      const modelNames = listMethod(this);
 
-    for (const modelName of hasManyNotNestedModels) {
-      const {
-        model: ChildModel,
-        opts: {
-          foreignKey = undefined,
-          indexName = undefined,
-          parentPropertyOnChild = undefined,
-        } = {},
-      } = getHasManyModel(this, modelName) || {};
-
-      if (foreignKey != null && indexName != null) {
+      for (const modelName of modelNames) {
         const {
-          items: children,
-        } = await ChildModel.queryAll({
-          IndexName: indexName,
-          ExpressionAttributeNames: {
-            '#_fk': foreignKey,
-          },
-          ExpressionAttributeValues: {
-            ':_fk': this[foreignKey],
-          },
-          KeyConditionExpression: '#_fk = :_fk',
-        });
+          model: ChildModel,
+          opts: {
+            foreignKey = undefined,
+            indexName = undefined,
+            parentPropertyOnChild = undefined,
+          } = {},
+        } = itemMethod(this, modelName) || {};
 
-        if (parentPropertyOnChild) {
-          children.forEach((child) => {
-            child[parentPropertyOnChild] = this;
+        if (foreignKey != null && indexName != null) {
+          let fkValue = this[foreignKey];
+          if ([this._primaryKey, this._secondaryKey].includes(foreignKey)) {
+            fkValue = this.transformedDBKey[foreignKey];
+          }
+
+          const {
+            items,
+          } = await ChildModel.queryAll({
+            IndexName: indexName,
+            ExpressionAttributeNames: {
+              '#_fk': foreignKey,
+            },
+            ExpressionAttributeValues: {
+              ':_fk': fkValue,
+            },
+            KeyConditionExpression: '#_fk = :_fk',
           });
-        }
 
-        this[modelName] = children;
-      }
-    }
+          if (parentPropertyOnChild) {
+            items.forEach((item) => {
+              item[parentPropertyOnChild] = this;
+            });
 
-    const hasOneNotNestedModels = getHasOneNotNestedModels(this);
+            if (type === 'hasMany') {
+              this[modelName] = items;
+            } else if (type === 'hasOne') {
+              // eslint-disable-next-line prefer-destructuring
+              this[modelName] = items[0];
+            } else if (type === 'belongsTo') {
+              const {
+                propertyKey,
+                type: parentType,
+              } = getHasFromBelong(this, foreignKey, indexName, parentPropertyOnChild) || {};
 
-    for (const modelName of hasOneNotNestedModels) {
-      const {
-        model: ChildModel,
-        opts: {
-          foreignKey = undefined,
-          indexName = undefined,
-          parentPropertyOnChild = undefined,
-        } = {},
-      } = getHasOneModel(this, modelName) || {};
+              for (const parent of items) {
+                if (propertyKey) {
+                  if (parentType === 'hasOne') {
+                    parent[propertyKey] = this;
+                  } else if (parentType === 'hasMany') {
+                    parent[propertyKey] = [this];
+                  }
+                }
 
-      if (foreignKey != null && indexName != null) {
-        const {
-          items: children,
-        } = await ChildModel.queryAll({
-          IndexName: indexName,
-          ExpressionAttributeNames: {
-            '#_fk': foreignKey,
-          },
-          ExpressionAttributeValues: {
-            ':_fk': this[foreignKey],
-          },
-          KeyConditionExpression: '#_fk = :_fk',
-        });
-
-        if (parentPropertyOnChild) {
-          children[0][parentPropertyOnChild] = this;
-        }
-
-        // eslint-disable-next-line prefer-destructuring
-        this[modelName] = children[0];
-      }
-    }
-
-    const belongsToModels = getBelongsToModels(this);
-
-    for (const modelName of belongsToModels) {
-      const {
-        model: ParentModel,
-        opts: {
-          foreignKey = undefined,
-          indexName = undefined,
-          parentPropertyOnChild = undefined,
-        } = {},
-      } = getBelongsToModel(this, modelName) || {};
-
-      if (foreignKey != null && indexName != null) {
-        const {
-          items: [parent],
-        } = await ParentModel.queryAll({
-          IndexName: indexName,
-          ExpressionAttributeNames: {
-            '#_fk': foreignKey,
-          },
-          ExpressionAttributeValues: {
-            ':_fk': this[foreignKey],
-          },
-          KeyConditionExpression: '#_fk = :_fk',
-        });
-
-        const {
-          propertyKey,
-          type,
-        } = getHasFromBelong(this, foreignKey, indexName, parentPropertyOnChild) || {};
-
-        if (propertyKey) {
-          if (type === 'hasOne') {
-            parent[propertyKey] = this;
-          } else if (type === 'hasMany') {
-            parent[propertyKey] = [this];
+                this[modelName] = parent;
+              }
+            }
           }
         }
-
-        // eslint-disable-next-line prefer-destructuring
-        this[modelName] = parent;
       }
     }
   }
