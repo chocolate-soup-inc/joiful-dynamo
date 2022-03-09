@@ -193,7 +193,7 @@ export class DynamoEntity extends BasicEntity {
     const response = await this._dynamodb.query(queryParams).promise();
 
     if (process.env.JOIFUL_DYNAMO_DEBUG) {
-      console.log('QUERY RESPONSE', queryParams);
+      console.log('QUERY RESPONSE', response);
     }
 
     return response;
@@ -334,9 +334,10 @@ export class DynamoEntity extends BasicEntity {
     const finalKey: AWS.DynamoDB.DocumentClient.Key = {};
     [this._primaryKey, this._secondaryKey].forEach((_key) => {
       if (_key != null) {
+        const entityName = getParentForeignKeys(this)[_key] || this._entityName;
         const value = key[_key];
         if (value != null) {
-          finalKey[_key] = key[_key].toString().replace(`${this._entityName}-`, '');
+          finalKey[_key] = key[_key].toString().replace(`${entityName}-`, '');
         }
       }
     });

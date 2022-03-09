@@ -752,6 +752,23 @@ describe('Dynamo Entity', () => {
                   },
                 },
               }],
+              [foreignSkTableName]: [{
+                PutRequest: {
+                  Item: {
+                    pk: 'ChildWithForeignSecondaryKey-2',
+                    _fk: 'ModelWithForeignSecondaryKey-1',
+                    _entityName: 'ChildWithForeignSecondaryKey',
+                  },
+                },
+              }, {
+                PutRequest: {
+                  Item: {
+                    pk: 'ModelWithForeignSecondaryKey-1',
+                    _fk: 'ModelWithForeignSecondaryKey-1',
+                    _entityName: 'ModelWithForeignSecondaryKey',
+                  },
+                },
+              }],
             },
           }).promise();
         });
@@ -767,6 +784,49 @@ describe('Dynamo Entity', () => {
           await instance.load();
 
           expect(instance.extraProp).toEqual('database-extra-1');
+        });
+
+        test('It should correctly parse the primary key and secondary key', async () => {
+          const instance = new TestModel({
+            pk: 'load-1',
+            sk: 'load-2',
+          });
+
+          await instance.load();
+          expect(instance.pk).toEqual('load-1');
+          expect(instance.sk).toEqual('load-2');
+        });
+
+        test('It should correctly parse the primary key and secondary key when the secondary key is a foreignKey', async () => {
+          const parentInstance = new ModelWithForeignSecondaryKey({
+            pk: '1',
+            _fk: '1',
+          });
+
+          await parentInstance.load();
+          expect(parentInstance.pk).toEqual('1');
+          expect(parentInstance._fk).toEqual('1');
+
+          const childInstnace = new ChildWithForeignSecondaryKey({
+            pk: '2',
+            _fk: '1',
+          });
+
+          await childInstnace.load();
+          expect(childInstnace.pk).toEqual('2');
+          expect(childInstnace._fk).toEqual('1');
+
+          let { items: parentItems } = await ModelWithForeignSecondaryKey.scanAll();
+          expect(parentItems).toHaveLength(1);
+          await parentInstance.delete();
+          ({ items: parentItems } = await ModelWithForeignSecondaryKey.scanAll());
+          expect(parentItems).toHaveLength(0);
+
+          let { items: childItems } = await ChildWithForeignSecondaryKey.scanAll();
+          expect(childItems).toHaveLength(1);
+          await childInstnace.delete();
+          ({ items: childItems } = await ChildWithForeignSecondaryKey.scanAll());
+          expect(childItems).toHaveLength(0);
         });
 
         test('It should not load if using the wrong model', async () => {

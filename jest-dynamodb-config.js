@@ -93,5 +93,23 @@ module.exports = {
       }],
       BillingMode: 'PAY_PER_REQUEST',
     },
+    {
+      TableName: 'test-foreign-sk',
+      KeySchema: [{
+        AttributeName: 'pk',
+        KeyType: 'HASH',
+      }, {
+        AttributeName: '_fk',
+        KeyType: 'RANGE',
+      }],
+      AttributeDefinitions: [{
+        AttributeName: 'pk',
+        AttributeType: 'S',
+      }, {
+        AttributeName: '_fk',
+        AttributeType: 'S',
+      }],
+      BillingMode: 'PAY_PER_REQUEST',
+    },
   ],
 };
