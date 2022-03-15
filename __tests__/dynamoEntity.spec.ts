@@ -786,6 +786,19 @@ describe('Dynamo Entity', () => {
           expect(instance.extraProp).toEqual('database-extra-1');
         });
 
+        test('Load with full dynamodb pk and sk works using the initialize method', async () => {
+          const instance = TestModel.initialize({
+            pk: 'TestModel-load-1',
+            sk: 'TestModel-load-2',
+          });
+
+          expect(instance.extraProp).toBeUndefined();
+
+          await instance.load();
+
+          expect(instance.extraProp).toEqual('database-extra-1');
+        });
+
         test('It should correctly parse the primary key and secondary key', async () => {
           const instance = new TestModel({
             pk: 'load-1',

@@ -93,7 +93,13 @@ export class DynamoEntity extends BasicEntity {
 
   // ---------------- TABLE SUPPORT METHODS ----------------
 
-  protected static initialize(item: Record<string, any>) {
+  /**
+   * Initializes an instance from the raw dynamodb data.
+   * @param {Record<string, any>} item - The dynamodb raw data.
+   */
+  static initialize(item: Record<string, any>) {
+    if (item._entityName == null) item._entityName = this._entityName;
+
     if (item._entityName === this._entityName) {
       return new this(this.prototype.parseDynamoAttributes(item));
     }
