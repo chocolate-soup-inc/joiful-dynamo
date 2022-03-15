@@ -12,6 +12,7 @@ import {
   getTableDynamoDbInstance,
   getTableName,
   getUpdatedAtKey,
+  setTableName,
   validateAttributes,
 } from '../Decorators';
 import { getBelongsToModel, getBelongsToModels, getHasFromBelong } from '../Decorators/belongsTo';
@@ -43,6 +44,14 @@ export class DynamoEntity extends BasicEntity {
 
   /** @internal */
   static get _dynamodb() { return this.prototype._dynamodb; }
+
+  /**
+   * Sets the tableName for the table on runtime. Used if you want to override the table that was set by the @table decorator.
+   * @param {string} tableName - The name of DynamoDB table you want to set for this entity model.
+   */
+  static setTableName(tableName: string) {
+    setTableName(this, tableName);
+  }
 
   /** @internal */
   get _tableName() { return getTableName(this.constructor); }

@@ -72,6 +72,16 @@ export const getTableName = (target: any): string => {
 };
 
 /** @internal */
+export const setTableName = (target: any, tableName: string): void => {
+  const props = getTableProps(target);
+
+  Reflect.defineMetadata(tableMetadataKey, {
+    ...props,
+    name: tableName,
+  }, target);
+};
+
+/** @internal */
 export const getTableDynamoDbInstance = (target: any): AWS.DynamoDB.DocumentClient => {
   return getTableProps(target).dynamodb;
 };

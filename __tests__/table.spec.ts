@@ -13,6 +13,17 @@ describe('Table Decorator', () => {
     expect(instance._tableName).toEqual(tableName);
   });
 
+  it('correctly lets the user override the tableName with the setTableName method', () => {
+    const instance = new TestModel();
+    expect(instance._tableName).toEqual(tableName);
+    TestModel.setTableName('testTableName');
+    expect(instance._tableName).toEqual('testTableName');
+    expect(TestModel._tableName).toEqual('testTableName');
+    TestModel.setTableName(tableName);
+    expect(instance._tableName).toEqual(tableName);
+    expect(TestModel._tableName).toEqual(tableName);
+  });
+
   it('sets the tableName correctly in the static method', () => {
     expect(TestModel._tableName).toEqual(tableName);
   });
