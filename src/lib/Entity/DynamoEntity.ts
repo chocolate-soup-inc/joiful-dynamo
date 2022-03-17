@@ -683,7 +683,7 @@ export class DynamoEntity extends BasicEntity {
         } = itemMethod(this, modelName) || {};
 
         if (foreignKey != null && indexName != null) {
-          let fkValue = this[foreignKey];
+          let fkValue = this.validatedAttributes[foreignKey];
           if ([this._primaryKey, this._secondaryKey].includes(foreignKey)) {
             fkValue = this.transformedDBKey[foreignKey];
           }
