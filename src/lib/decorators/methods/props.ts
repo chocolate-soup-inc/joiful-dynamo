@@ -1,66 +1,5 @@
-import 'reflect-metadata';
-
-export type PropOptions = {
-  primaryKey?: boolean;
-  secondaryKey?: boolean;
-  createdAt?: boolean;
-  updatedAt?: boolean;
-};
-
-const propMetadataKey = Symbol('prop');
-const primaryKeyMetadataKey = 'primaryKey';
-const secondaryKeyMetadataKey = 'secondaryKey';
-const createdAtKeyMetadataKey = 'createdAtKey';
-const updatedAtKeyMetadataKey = 'updatedAtKey';
-
-/** @internal */
-export function getPrimaryKey(target: any): string | undefined {
-  return Reflect.getMetadata(primaryKeyMetadataKey, target);
-}
-
-/** @internal */
-export function getSecondaryKey(target: any): string | undefined {
-  return Reflect.getMetadata(secondaryKeyMetadataKey, target);
-}
-
-/** @internal */
-export function getCreatedAtKey(target: any): string | undefined {
-  return Reflect.getMetadata(createdAtKeyMetadataKey, target);
-}
-
-/** @internal */
-export function getUpdatedAtKey(target: any): string | undefined {
-  return Reflect.getMetadata(updatedAtKeyMetadataKey, target);
-}
-
-/** @internal */
-export function setPropDescriptor(target: any, propertyKey: string): void {
-  Object.defineProperty(target, propertyKey, {
-    get() {
-      return this.getAttribute(propertyKey);
-    },
-    set(v) {
-      this.setAttribute(propertyKey, v);
-    },
-    configurable: true,
-    enumerable: true,
-  });
-}
-
-/** @internal */
-export function setPropGettersAndSetters(target: any, propertyKey: string): void {
-  // SET THE LIST OF VALIDATED PROPERTIES IN THE INSTANCE
-  const properties: string[] = Reflect.getMetadata(propMetadataKey, target) || [];
-
-  if (properties.includes(propertyKey)) return;
-
-  properties.push(propertyKey);
-  Reflect.defineMetadata(propMetadataKey, properties, target);
-
-  if (Object.getOwnPropertyDescriptor(target, propertyKey) == null) {
-    setPropDescriptor(target, propertyKey);
-  }
-}
+import { setPropGettersAndSetters } from '../properties/props';
+import { addProp, PropOptions } from '../reflections/props';
 
 /**
  * Sets the decorated property as a mapped property of the Entity setting its setters and getters (this is important for the attribute mapping for inserting in the database). Besides this, all the parameters initialized with the entity model will have the correct setters and getters. You can also set some properties as primaryKeys, secondaryKeys, createdAt or updatedAt.
@@ -127,26 +66,10 @@ export function setPropGettersAndSetters(target: any, propertyKey: string): void
  * @category Property Decorators
  */
 export function prop(opts?: PropOptions) {
-  return (target: any, propertyKey: string) => {
+  return (target: any, propertyName: string) => {
     // TARGET IS THE CLASS PROTOTYPE
-    setPropGettersAndSetters(target, propertyKey);
-
-    const obj = {
-      [primaryKeyMetadataKey]: opts?.primaryKey,
-      [secondaryKeyMetadataKey]: opts?.secondaryKey,
-      [createdAtKeyMetadataKey]: opts?.createdAt,
-      [updatedAtKeyMetadataKey]: opts?.updatedAt,
-    };
-
-    Object.entries(obj).forEach(([key, value]) => {
-      if (value) {
-        const currentValue = Reflect.getMetadata(key, target);
-        if (currentValue != null) {
-          throw new Error(`Cannot have 2 properties as ${key}`);
-        } else {
-          Reflect.defineMetadata(key, propertyKey, target);
-        }
-      }
-    });
+    addProp(target, propertyName, opts);
+    // setPropGettersAndSetters(target, propertyName, opts);
+    setPropGettersAndSetters(target, propertyName);
   };
 }

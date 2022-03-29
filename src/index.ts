@@ -1,5 +1,5 @@
-export * from './lib/Entity';
-export * from './lib/Entity/DynamoPaginator';
+export { DynamoEntity as Entity } from './lib/DynamoEntity';
+export * from './lib/DynamoPaginator';
 export {
   aliasTo,
   aliases,
@@ -9,4 +9,4 @@ export {
   prop,
   table,
   validate,
-} from './lib/Decorators/index';
+} from './lib/decorators/methods/index';

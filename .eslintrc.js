@@ -42,6 +42,7 @@ module.exports = {
         ]
       }
     ],
+    'no-prototype-builtins': 'off',
     // '@typescript-eslint/indent': ['error', 2],
   }
 };

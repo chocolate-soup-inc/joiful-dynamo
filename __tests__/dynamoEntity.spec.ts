@@ -1,10 +1,17 @@
 /* eslint-disable no-await-in-loop */
 import Joi from 'joi';
-import { DynamoPaginator } from '../src/lib/Entity/DynamoPaginator';
-import { Entity } from '../src/lib/Entity';
-import { prop } from '../src/lib/Decorators/prop';
-import { dynamodbDocumentClient, table } from '../src/lib/Decorators/table';
-import { hasMany, hasOne, validate } from '../src/lib/Decorators';
+
+import {
+  BatchWriteCommand,
+  GetCommand,
+} from '@aws-sdk/lib-dynamodb';
+
+import { DynamoPaginator } from '../src/lib/DynamoPaginator';
+import { DynamoEntity as Entity } from '../src/lib/DynamoEntity';
+import { prop } from '../src/lib/decorators/methods/props';
+import { dynamodbDocumentClient, table } from '../src/lib/decorators/methods/table';
+import { validate } from '../src/lib/decorators/methods/validations';
+import { hasMany, hasOne } from '../src/lib/decorators/methods/relations';
 
 const tableName = 'test-table';
 const onlyPkTableName = 'test-only-pk';
@@ -26,6 +33,10 @@ class TestModel extends Entity {
 
   @prop()
   extraProp: string;
+
+  public static initialize(item: Record<string, any>) {
+    return super.initialize(item);
+  }
 }
 
 @table(tableName)
@@ -103,32 +114,73 @@ describe('Dynamo Entity', () => {
     const instance = new ModelForTestingJSONTransforming({ pk: '1', extraAttribute: '3' });
     expect(instance.toJSON()).toStrictEqual({
       key: {
-        pk: '1',
-        sk: undefined,
+        pk: 'ModelForTestingJSONTransforming-1',
+        sk: 'ModelForTestingJSONTransforming-1',
       },
-      data: {
+      attributes: {
         pk: '1',
         extraAttribute: '3',
       },
+      validatedAttributes: undefined,
+      dirty: true,
+      error: undefined,
+    });
+
+    instance.validate();
+
+    expect(instance.toJSON()).toEqual({
+      key: {
+        pk: 'ModelForTestingJSONTransforming-1',
+        sk: 'ModelForTestingJSONTransforming-1',
+      },
+      attributes: {
+        pk: '1',
+        extraAttribute: '3',
+      },
+      validatedAttributes: {
+        pk: '1',
+        extraAttribute: '3',
+      },
+      dirty: false,
       error: '"sk" is required',
     });
 
     instance.sk = '   2   ';
-    expect(instance.toJSON()).toStrictEqual({
+
+    expect(instance.toJSON()).toEqual({
       key: {
-        pk: '1',
-        sk: '2',
+        pk: 'ModelForTestingJSONTransforming-1',
+        sk: 'ModelForTestingJSONTransforming-2',
       },
-      data: {
-        pk: '1',
-        sk: '   2   ',
-        extraAttribute: '3',
-      },
-      validatedData: {
+      attributes: {
         pk: '1',
         sk: '2',
         extraAttribute: '3',
       },
+      validatedAttributes: undefined,
+      dirty: true,
+      error: undefined,
+    });
+
+    instance.validate();
+
+    expect(instance.toJSON()).toEqual({
+      key: {
+        pk: 'ModelForTestingJSONTransforming-1',
+        sk: 'ModelForTestingJSONTransforming-2',
+      },
+      attributes: {
+        pk: '1',
+        sk: '2',
+        extraAttribute: '3',
+      },
+      validatedAttributes: {
+        pk: '1',
+        sk: '2',
+        extraAttribute: '3',
+      },
+      dirty: false,
+      error: undefined,
     });
 
     instance.child = new TestModel({
@@ -138,19 +190,10 @@ describe('Dynamo Entity', () => {
 
     expect(instance.toJSON()).toStrictEqual({
       key: {
-        pk: '1',
-        sk: '2',
+        pk: 'ModelForTestingJSONTransforming-1',
+        sk: 'ModelForTestingJSONTransforming-2',
       },
-      data: {
-        pk: '1',
-        sk: '   2   ',
-        extraAttribute: '3',
-        child: {
-          pk: '3',
-          sk: '4',
-        },
-      },
-      validatedData: {
+      attributes: {
         pk: '1',
         sk: '2',
         extraAttribute: '3',
@@ -159,6 +202,38 @@ describe('Dynamo Entity', () => {
           sk: '4',
         },
       },
+      dirty: true,
+      error: undefined,
+      validatedAttributes: undefined,
+    });
+
+    instance.validate();
+
+    expect(instance.toJSON()).toEqual({
+      key: {
+        pk: 'ModelForTestingJSONTransforming-1',
+        sk: 'ModelForTestingJSONTransforming-2',
+      },
+      attributes: {
+        pk: '1',
+        sk: '2',
+        extraAttribute: '3',
+        child: {
+          pk: '3',
+          sk: '4',
+        },
+      },
+      validatedAttributes: {
+        pk: '1',
+        sk: '2',
+        extraAttribute: '3',
+        child: {
+          pk: '3',
+          sk: '4',
+        },
+      },
+      dirty: false,
+      error: undefined,
     });
 
     instance.children = [new OtherModel({
@@ -168,19 +243,10 @@ describe('Dynamo Entity', () => {
 
     expect(instance.toJSON()).toStrictEqual({
       key: {
-        pk: '1',
-        sk: '2',
+        pk: 'ModelForTestingJSONTransforming-1',
+        sk: 'ModelForTestingJSONTransforming-2',
       },
-      data: {
-        pk: '1',
-        sk: '   2   ',
-        extraAttribute: '3',
-        child: {
-          pk: '3',
-          sk: '4',
-        },
-      },
-      validatedData: {
+      attributes: {
         pk: '1',
         sk: '2',
         extraAttribute: '3',
@@ -188,7 +254,51 @@ describe('Dynamo Entity', () => {
           pk: '3',
           sk: '4',
         },
+        children: [{
+          pk: '5',
+          sk: '6',
+        }],
       },
+      dirty: true,
+      error: undefined,
+      validatedAttributes: undefined,
+    });
+
+    instance.validate();
+
+    expect(instance.toJSON()).toEqual({
+      key: {
+        pk: 'ModelForTestingJSONTransforming-1',
+        sk: 'ModelForTestingJSONTransforming-2',
+      },
+      attributes: {
+        pk: '1',
+        sk: '2',
+        extraAttribute: '3',
+        child: {
+          pk: '3',
+          sk: '4',
+        },
+        children: [{
+          pk: '5',
+          sk: '6',
+        }],
+      },
+      validatedAttributes: {
+        pk: '1',
+        sk: '2',
+        extraAttribute: '3',
+        child: {
+          pk: '3',
+          sk: '4',
+        },
+        children: [{
+          pk: '5',
+          sk: '6',
+        }],
+      },
+      dirty: false,
+      error: undefined,
     });
   });
 
@@ -196,43 +306,25 @@ describe('Dynamo Entity', () => {
     test('It correctly returns the correct data in a model with both primary and secondary keys', () => {
       const instance = new TestModel({ pk: '1', sk: '2', extraAttribute: '3' });
       expect(instance.dbKey).toStrictEqual({
-        pk: '1',
-        sk: '2',
-      });
-
-      expect(instance.transformedDBKey).toStrictEqual({
         pk: 'TestModel-1',
         sk: 'TestModel-2',
       });
 
       const otherInstance = new TestModel({ pk: '1', extraAttribute: '3' });
       expect(otherInstance.dbKey).toStrictEqual({
-        pk: '1',
-        sk: undefined,
-      });
-
-      expect(otherInstance.transformedDBKey).toStrictEqual({
         pk: 'TestModel-1',
-        sk: undefined,
+        sk: 'TestModel-1',
       });
     });
 
     test('It correctly returns the correct data in a model with only a primary key', () => {
       const instance = new ModelWithNoSecondaryKey({ pk: '1', sk: '2', extraAttribute: '3' });
       expect(instance.dbKey).toStrictEqual({
-        pk: '1',
-      });
-
-      expect(instance.transformedDBKey).toStrictEqual({
         pk: 'ModelWithNoSecondaryKey-1',
       });
 
       const otherInstance = new ModelWithNoSecondaryKey({ pk: '1', extraAttribute: '3' });
       expect(otherInstance.dbKey).toStrictEqual({
-        pk: '1',
-      });
-
-      expect(otherInstance.transformedDBKey).toStrictEqual({
         pk: 'ModelWithNoSecondaryKey-1',
       });
     });
@@ -258,7 +350,7 @@ describe('Dynamo Entity', () => {
 
       describe('When there is some data registered', () => {
         beforeEach(async () => {
-          await dynamodbDocumentClient.batchWrite({
+          await dynamodbDocumentClient.send(new BatchWriteCommand({
             RequestItems: {
               [tableName]: [{
                 PutRequest: {
@@ -278,7 +370,7 @@ describe('Dynamo Entity', () => {
                 },
               }],
             },
-          }).promise();
+          }));
         });
 
         test('It should return the correct items when there is data in the database', async () => {
@@ -389,7 +481,7 @@ describe('Dynamo Entity', () => {
 
       describe('When there is some data registered', () => {
         beforeEach(async () => {
-          await dynamodbDocumentClient.batchWrite({
+          await dynamodbDocumentClient.send(new BatchWriteCommand({
             RequestItems: {
               [tableName]: [{
                 PutRequest: {
@@ -417,7 +509,7 @@ describe('Dynamo Entity', () => {
                 },
               }],
             },
-          }).promise();
+          }));
         });
 
         test('It should return the correct items when there is data in the database', async () => {
@@ -498,16 +590,15 @@ describe('Dynamo Entity', () => {
 
     describe('Get', () => {
       test('It should return undefined when there is no data in the database', async () => {
-        const response = await TestModel.getItem({
+        await expect(() => TestModel.getItem({
           pk: 'get-1',
           sk: 'get-2',
-        });
-        expect(response).toBeUndefined();
+        })).rejects.toThrowError('Record not found.');
       });
 
       describe('When there is some data registered', () => {
         beforeEach(async () => {
-          await dynamodbDocumentClient.batchWrite({
+          await dynamodbDocumentClient.send(new BatchWriteCommand({
             RequestItems: {
               [tableName]: [{
                 PutRequest: {
@@ -527,7 +618,7 @@ describe('Dynamo Entity', () => {
                 },
               }],
             },
-          }).promise();
+          }));
         });
 
         test('It should return the correct object when there is data', async () => {
@@ -546,6 +637,12 @@ describe('Dynamo Entity', () => {
         test('It should throw an error if not passing a full key to the method', async () => {
           await expect(TestModel.getItem({
             pk: 'get-1',
+          })).rejects.toThrowError('Record not found.');
+        });
+
+        test('It should throw an error if not passing a full key to the method', async () => {
+          await expect(TestModel.getItem({
+            sk: 'get-2',
           })).rejects.toThrowError('The number of conditions on the keys is invalid');
         });
 
@@ -555,13 +652,12 @@ describe('Dynamo Entity', () => {
             sk: 'get-2',
           });
 
-          const otherModelResponse = await OtherModel.getItem({
+          await expect(() => OtherModel.getItem({
             pk: 'get-1',
             sk: 'get-2',
-          });
+          })).rejects.toThrowError('Record not found.');
 
           expect(testModelResponse).toBeInstanceOf(TestModel);
-          expect(otherModelResponse).toBeUndefined();
         });
       });
     });
@@ -571,12 +667,12 @@ describe('Dynamo Entity', () => {
         await expect(TestModel.deleteItem({
           pk: 'delete-1',
           sk: 'delete-2',
-        })).rejects.toThrowError('The conditional request failed');
+        })).rejects.toThrowError('Record not found.');
       });
 
       describe('When there is some data registered', () => {
         beforeEach(async () => {
-          await dynamodbDocumentClient.batchWrite({
+          await dynamodbDocumentClient.send(new BatchWriteCommand({
             RequestItems: {
               [tableName]: [{
                 PutRequest: {
@@ -596,7 +692,7 @@ describe('Dynamo Entity', () => {
                 },
               }],
             },
-          }).promise();
+          }));
         });
 
         test('It should return the deleted item attributes', async () => {
@@ -605,7 +701,7 @@ describe('Dynamo Entity', () => {
             sk: 'delete-2',
           });
 
-          expect(response).toEqual({
+          expect(response.Attributes).toStrictEqual({
             pk: 'TestModel-delete-1',
             sk: 'TestModel-delete-2',
             _entityName: 'TestModel',
@@ -633,12 +729,12 @@ describe('Dynamo Entity', () => {
           await expect(OtherModel.deleteItem({
             pk: 'delete-3',
             sk: 'delete-4',
-          })).rejects.toThrowError('The conditional request failed');
+          })).rejects.toThrowError('Record not found.');
 
           await expect(TestModel.deleteItem({
             pk: 'delete-3',
             sk: 'delete-4',
-          })).resolves.not.toThrow('The conditional request failed');
+          })).resolves.not.toThrow('Record not found.');
         });
       });
     });
@@ -646,12 +742,12 @@ describe('Dynamo Entity', () => {
     describe('Instance Delete', () => {
       test('should return error when the item is not found', async () => {
         const instance = new TestModel({ pk: 'instance-delete-1', sk: 'instance-delete-2' });
-        await expect(instance.delete).rejects.toThrowError('The conditional request failed');
+        await expect(() => instance.delete()).rejects.toThrowError('Record not found.');
       });
 
       describe('When there is some data registered', () => {
         beforeEach(async () => {
-          await dynamodbDocumentClient.batchWrite({
+          await dynamodbDocumentClient.send(new BatchWriteCommand({
             RequestItems: {
               [tableName]: [{
                 PutRequest: {
@@ -671,14 +767,14 @@ describe('Dynamo Entity', () => {
                 },
               }],
             },
-          }).promise();
+          }));
         });
 
         test('It should return the deleted item attributes', async () => {
           const instance = new TestModel({ pk: 'instance-delete-1', sk: 'instance-delete-2' });
           const response = await instance.delete();
 
-          expect(response).toEqual({
+          expect(response.Attributes).toEqual({
             pk: 'TestModel-instance-delete-1',
             sk: 'TestModel-instance-delete-2',
             _entityName: 'TestModel',
@@ -707,14 +803,14 @@ describe('Dynamo Entity', () => {
             pk: 'instance-delete-3',
             sk: 'instance-delete-4',
           });
-          await expect(otherModel.delete()).rejects.toThrowError('The conditional request failed');
+          await expect(otherModel.delete()).rejects.toThrowError('Record not found.');
 
           const testModel = new TestModel({
             pk: 'instance-delete-3',
             sk: 'instance-delete-4',
           });
 
-          await expect(testModel.delete()).resolves.not.toThrow('The conditional request failed');
+          await expect(testModel.delete()).resolves.not.toThrow('Record not found.');
         });
       });
     });
@@ -731,7 +827,7 @@ describe('Dynamo Entity', () => {
 
       describe('When there is some data registered', () => {
         beforeEach(async () => {
-          await dynamodbDocumentClient.batchWrite({
+          await dynamodbDocumentClient.send(new BatchWriteCommand({
             RequestItems: {
               [tableName]: [{
                 PutRequest: {
@@ -770,7 +866,7 @@ describe('Dynamo Entity', () => {
                 },
               }],
             },
-          }).promise();
+          }));
         });
 
         test('It should load the data correctly', async () => {
@@ -790,6 +886,7 @@ describe('Dynamo Entity', () => {
           const instance = TestModel.initialize({
             pk: 'TestModel-load-1',
             sk: 'TestModel-load-2',
+            _entityName: 'TestModel',
           });
 
           expect(instance.extraProp).toBeUndefined();
@@ -848,16 +945,19 @@ describe('Dynamo Entity', () => {
             sk: 'load-2',
           });
 
-          await expect(instance.load).rejects.toThrowError('Record not found.');
+          await expect(() => instance.load()).rejects.toThrowError('Record not found.');
         });
       });
     });
 
     describe('Instance Create', () => {
       test('It should throw an error if nothing is set', async () => {
-        const instance = new TestModel();
+        const instance = new TestModel({
+          pk: undefined,
+        });
+        instance.validate();
 
-        await expect(instance.create()).rejects.toThrowError('You cannot save an instance with no attributes at all.');
+        await expect(instance.create()).rejects.toThrowError('Entity cannot be empty.');
       });
 
       describe('When there is some data registered', () => {
@@ -868,7 +968,7 @@ describe('Dynamo Entity', () => {
 
           now = new Date().toISOString();
 
-          await dynamodbDocumentClient.batchWrite({
+          await dynamodbDocumentClient.send(new BatchWriteCommand({
             RequestItems: {
               [tableName]: [{
                 PutRequest: {
@@ -883,7 +983,7 @@ describe('Dynamo Entity', () => {
                 },
               }],
             },
-          }).promise();
+          }));
 
           jest.useRealTimers();
         });
@@ -960,10 +1060,13 @@ describe('Dynamo Entity', () => {
 
           expect(existingItems).toHaveLength(1);
 
-          let instance = await TestModel.getItem({
-            pk: 'create-1',
-            sk: 'create-3',
-          });
+          let instance;
+          await expect(async () => {
+            instance = await TestModel.getItem({
+              pk: 'create-1',
+              sk: 'create-3',
+            });
+          }).rejects.toThrowError('Record not found.');
 
           expect(instance).toBeUndefined();
 
@@ -977,23 +1080,23 @@ describe('Dynamo Entity', () => {
 
           await instance.create();
 
-          scanResult = await TestModel.scanAll(scanOptions);
-          existingItems = scanResult.items;
-
-          expect(existingItems).toHaveLength(2);
-
           expect(instance.pk).toEqual('create-1');
           expect(instance.sk).toEqual('create-3');
           expect(instance.createdAt).not.toBeUndefined();
           expect(instance.updatedAt).not.toBeUndefined();
 
-          const response = await dynamodbDocumentClient.get({
+          scanResult = await TestModel.scanAll();
+          existingItems = scanResult.items;
+
+          expect(existingItems).toHaveLength(2);
+
+          const response = await dynamodbDocumentClient.send(new GetCommand({
             TableName: tableName,
             Key: {
               pk: 'TestModel-create-1',
               sk: 'TestModel-create-3',
             },
-          }).promise();
+          }));
 
           // IT CORRECTLY SETS ALL THE ATTRIBUTES
           expect(response.Item).toStrictEqual({
@@ -1011,14 +1114,14 @@ describe('Dynamo Entity', () => {
       test('It should throw an error if nothing is set', async () => {
         const instance = new TestModel();
 
-        await expect(instance.update()).rejects.toThrowError('You cannot save an instance with no attributes at all.');
+        await expect(() => instance.update()).rejects.toThrowError('Entity cannot be empty.');
       });
 
       describe('When there is some data registered', () => {
         let now;
         beforeEach(async () => {
           now = new Date().toISOString();
-          await dynamodbDocumentClient.batchWrite({
+          await dynamodbDocumentClient.send(new BatchWriteCommand({
             RequestItems: {
               [tableName]: [{
                 PutRequest: {
@@ -1033,7 +1136,7 @@ describe('Dynamo Entity', () => {
                 },
               }],
             },
-          }).promise();
+          }));
         });
 
         test('It updates an existing item and sets a new createdAt and updatedAt', async () => {
@@ -1054,7 +1157,6 @@ describe('Dynamo Entity', () => {
           });
 
           expect(instance).not.toBeUndefined();
-          if (instance == null) return;
 
           expect(instance.attributes).toStrictEqual({
             pk: 'update-1',
@@ -1092,7 +1194,6 @@ describe('Dynamo Entity', () => {
           });
 
           expect(newGetInstance).not.toBeUndefined();
-          if (newGetInstance == null) return;
 
           expect(newGetInstance.pk).toEqual('update-1');
           expect(newGetInstance.sk).toEqual('update-2');
@@ -1121,10 +1222,13 @@ describe('Dynamo Entity', () => {
 
           expect(existingItems).toHaveLength(1);
 
-          let instance = await TestModel.getItem({
-            pk: 'update-1',
-            sk: 'update-3',
-          });
+          let instance;
+          await expect(async () => {
+            instance = await TestModel.getItem({
+              pk: 'update-1',
+              sk: 'update-3',
+            });
+          }).rejects.toThrowError('Record not found.');
 
           expect(instance).toBeUndefined();
 
@@ -1154,7 +1258,7 @@ describe('Dynamo Entity', () => {
 
   describe('Testing a model with no secondary Key', () => {
     beforeEach(async () => {
-      await dynamodbDocumentClient.batchWrite({
+      await dynamodbDocumentClient.send(new BatchWriteCommand({
         RequestItems: {
           [onlyPkTableName]: [{
             PutRequest: {
@@ -1174,7 +1278,7 @@ describe('Dynamo Entity', () => {
             },
           }],
         },
-      }).promise();
+      }));
     });
 
     test('Scan works', async () => {
@@ -1242,8 +1346,8 @@ describe('Dynamo Entity', () => {
         pk: '1',
       });
 
-      expect(model._fk).toBeUndefined();
-      expect(model.transformedDBKey).toStrictEqual({
+      expect(model._fk).toEqual('1');
+      expect(model.dbKey).toStrictEqual({
         pk: 'ModelWithForeignSecondaryKey-1',
         _fk: 'ModelWithForeignSecondaryKey-1',
       });
@@ -1253,7 +1357,7 @@ describe('Dynamo Entity', () => {
       const model = new ModelWithForeignSecondaryKey();
 
       expect(model._fk).toBeUndefined();
-      expect(model.transformedDBKey).toStrictEqual({
+      expect(model.dbKey).toStrictEqual({
         pk: undefined,
         _fk: undefined,
       });
@@ -1266,9 +1370,9 @@ describe('Dynamo Entity', () => {
       });
 
       expect(model._fk).toEqual('2');
-      expect(model.transformedDBKey).toStrictEqual({
+      expect(model.dbKey).toStrictEqual({
         pk: 'ModelWithForeignSecondaryKey-1',
-        _fk: 'ModelWithForeignSecondaryKey-1',
+        _fk: 'ModelWithForeignSecondaryKey-2',
       });
     });
 
@@ -1279,7 +1383,7 @@ describe('Dynamo Entity', () => {
       });
 
       expect(model._fk).toEqual('2');
-      expect(model.transformedDBKey).toStrictEqual({
+      expect(model.dbKey).toStrictEqual({
         pk: 'ChildWithForeignSecondaryKey-1',
         _fk: 'ModelWithForeignSecondaryKey-2',
       });

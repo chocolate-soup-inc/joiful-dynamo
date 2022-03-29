@@ -1,10 +1,16 @@
 import * as Joi from 'joi';
 import { Entity } from '../src/lib/Entity';
-import { compositeKey } from '../src/lib/Decorators/compositeKey';
-import { prop } from '../src/lib/Decorators/prop';
-import { validate } from '../src/lib/Decorators/validate';
+import { compositeKey } from '../src/lib/decorators/methods/compositeKeys';
+import { prop } from '../src/lib/decorators/methods/props';
+import { validate } from '../src/lib/decorators/methods/validations';
 
-class TestModel extends Entity {
+class TestEntity extends Entity {
+  public transformAttributes() { return super.transformAttributes(); }
+
+  public static transformAttributes(item: Record<string, any>) { return super.transformAttributes(item); }
+}
+
+class TestModel extends TestEntity {
   @prop()
   @validate(Joi.string().required())
   @compositeKey(['field1', 'field2'])
@@ -17,7 +23,7 @@ class TestModel extends Entity {
   field2: string;
 }
 
-class TestModelWithDelimiter extends Entity {
+class TestModelWithDelimiter extends TestEntity {
   @prop()
   @validate(Joi.string().required())
   @compositeKey(['field1', 'field2'], { delimiter: '---' })
@@ -30,7 +36,7 @@ class TestModelWithDelimiter extends Entity {
   field2: string;
 }
 
-class TestModelWithNestedComposite extends Entity {
+class TestModelWithNestedComposite extends TestEntity {
   @prop()
   @compositeKey(['field1', 'field2'])
   composite0: string;
@@ -60,7 +66,7 @@ describe('Composite Keys', () => {
         field2: 2,
       });
 
-      expect(model.transformedAttributes.composite).toEqual('1#2');
+      expect(model.transformAttributes().composite).toEqual('1#2');
       expect(model.valid).toBeTruthy();
     });
 
@@ -69,7 +75,7 @@ describe('Composite Keys', () => {
         field1: '1',
       });
 
-      expect(model.transformedAttributes.composite).toBeUndefined();
+      expect(model.transformAttributes().composite).toBeUndefined();
       expect(model.valid).toBeFalsy();
     });
 
@@ -81,7 +87,7 @@ describe('Composite Keys', () => {
       });
 
       expect(model.composite).toEqual('123');
-      expect(model.transformedAttributes.composite).toEqual('1#2');
+      expect(model.transformAttributes().composite).toEqual('1#2');
     });
 
     test('When the value is set, it is overriden event if the value becomes null', () => {
@@ -91,7 +97,7 @@ describe('Composite Keys', () => {
       });
 
       expect(model.composite).toEqual('123');
-      expect(model.transformedAttributes.composite).toBeUndefined();
+      expect(model.transformAttributes().composite).toBeUndefined();
       expect(model.valid).toBeFalsy();
     });
 
@@ -102,7 +108,7 @@ describe('Composite Keys', () => {
         field2: '2',
       });
 
-      expect(model.transformedAttributes.composite).toEqual('1---2');
+      expect(model.transformAttributes().composite).toEqual('1---2');
     });
 
     test('when there is a nested composite key, it works as expected', () => {
@@ -112,7 +118,7 @@ describe('Composite Keys', () => {
         field3: '3',
       });
 
-      expect(model.transformedAttributes).toStrictEqual({
+      expect(model.transformAttributes()).toStrictEqual({
         composite0: '1#2',
         composite1: '1#2#1#2#3',
         composite2: '1#2#3',

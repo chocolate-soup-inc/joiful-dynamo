@@ -1,7 +1,26 @@
 import { Entity } from '../src/lib/Entity';
-import { prop } from '../src/lib/Decorators/prop';
+import { prop } from '../src/lib/decorators/methods/props';
+import { hasOne } from '../src/lib/decorators/methods/relations';
 
-class SimpleModel extends Entity {
+class TestEntity extends Entity {
+  public get _primaryKey() { return super._primaryKey; }
+
+  public get _secondaryKey() { return super._secondaryKey; }
+
+  public get _createdAtKey() { return super._createdAtKey; }
+
+  public get _updatedAtKey() { return super._updatedAtKey; }
+
+  public static get _primaryKey() { return super._primaryKey; }
+
+  public static get _secondaryKey() { return super._secondaryKey; }
+
+  public static get _createdAtKey() { return super._createdAtKey; }
+
+  public static get _updatedAtKey() { return super._updatedAtKey; }
+}
+
+class SimpleModel extends TestEntity {
   @prop({ primaryKey: true })
   pk: string;
 
@@ -15,7 +34,23 @@ class SimpleModel extends Entity {
   _uat: string;
 }
 
-class NoKeysModel extends Entity {
+class OtherSimpleModel extends Entity {
+  @prop({ primaryKey: true })
+  pk: string;
+
+  @prop({ secondaryKey: true })
+  sk: string;
+}
+
+class ParentModel extends Entity {
+  @prop({ primaryKey: true })
+  pk: string;
+
+  @hasOne(OtherSimpleModel, { foreignKey: 'sk' })
+  child: OtherSimpleModel;
+}
+
+class NoKeysModel extends TestEntity {
   @prop()
   pk: string;
 
@@ -70,5 +105,92 @@ describe('Prop', () => {
     expect(NoKeysModel._secondaryKey).toBeUndefined();
     expect(NoKeysModel._createdAtKey).toBeUndefined();
     expect(NoKeysModel._updatedAtKey).toBeUndefined();
+  });
+
+  test('when the primary key has the entityName prefix and there is no secondary key, the values are correctly parsed and the secondary key copies the primary key', () => {
+    const instance = new SimpleModel({ pk: 'SimpleModel-1' });
+    expect(instance.pk).toEqual('1');
+    expect(instance.sk).toBeUndefined();
+
+    expect(instance.dbKey).toStrictEqual({
+      pk: 'SimpleModel-1',
+      sk: 'SimpleModel-1',
+    });
+  });
+
+  test('when the secondary key has the entityName prefix', () => {
+    const instance = new SimpleModel({ sk: 'SimpleModel-1' });
+    expect(instance.sk).toEqual('1');
+
+    expect(instance.dbKey).toStrictEqual({
+      pk: undefined,
+      sk: 'SimpleModel-1',
+    });
+  });
+
+  test('when the primary and secondary keys and a random key has the entityName prefix', () => {
+    const instance = new SimpleModel({ pk: 'SimpleModel-1', sk: 'SimpleModel-2', random: 'SimpleModel-3' });
+    expect(instance.pk).toEqual('1');
+    expect(instance.sk).toEqual('2');
+    expect(instance.random).toEqual('SimpleModel-3');
+
+    expect(instance.dbKey).toStrictEqual({
+      pk: 'SimpleModel-1',
+      sk: 'SimpleModel-2',
+    });
+  });
+
+  test('when the sk has the parent prefix while the oher keys has the current model prefix and the sk is the foreign to a parent, it correctly sets the attributes.', () => {
+    const instance = new OtherSimpleModel({ pk: 'OtherSimpleModel-1', sk: 'ParentModel-2', random: 'OtherSimpleModel-3' });
+    expect(instance.pk).toEqual('1');
+    expect(instance.sk).toEqual('2');
+    expect(instance.random).toEqual('OtherSimpleModel-3');
+
+    expect(instance.dbKey).toStrictEqual({
+      pk: 'OtherSimpleModel-1',
+      sk: 'ParentModel-2',
+    });
+  });
+
+  test('when the primary, secondary and the random keys key has the entityName prefix and the sk is the foreign to a parent, it correctly sets the attributes.', () => {
+    const instance = new OtherSimpleModel({ pk: 'OtherSimpleModel-1', sk: 'OtherSimpleModel-2', random: 'OtherSimpleModel-3' });
+    expect(instance.pk).toEqual('1');
+    expect(instance.sk).toEqual('2');
+    expect(instance.random).toEqual('OtherSimpleModel-3');
+
+    expect(instance.dbKey).toStrictEqual({
+      pk: 'OtherSimpleModel-1',
+      sk: 'ParentModel-2',
+    });
+  });
+
+  test('when there is a parent with no children, the fk is set anyways', () => {
+    const instance = new ParentModel();
+    expect(instance.pk).toBeUndefined();
+    expect(instance.sk).toBeUndefined();
+
+    instance.pk = '1';
+
+    expect(instance.pk).toEqual('1');
+    expect(instance.sk).toEqual('1');
+
+    expect(instance.dbKey).toStrictEqual({
+      pk: 'ParentModel-1',
+    });
+
+    instance.sk = '2';
+
+    expect(instance.pk).toEqual('1');
+    expect(instance.sk).toEqual('2');
+
+    expect(instance.dbKey).toStrictEqual({
+      pk: 'ParentModel-1',
+    });
+
+    expect(instance.dbAttributes).toStrictEqual({
+      _entityName: 'ParentModel',
+      pk: 'ParentModel-1',
+      sk: 'ParentModel-2',
+    });
   });
 });

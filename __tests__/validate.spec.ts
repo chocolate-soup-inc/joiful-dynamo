@@ -1,7 +1,7 @@
 /* eslint-disable max-classes-per-file */
 import * as Joi from 'joi';
 import { Entity } from '../src/lib/Entity';
-import { validate } from '../src/lib/Decorators/validate';
+import { validate } from '../src/lib/decorators/methods/validations';
 
 class NoValidationModel extends Entity {
   pk: string;
@@ -26,11 +26,19 @@ describe('Validation', () => {
   describe('When there is no validation at all', () => {
     test('an instance with all data should be valid', () => {
       const model = new NoValidationModel({ pk: '123' });
-      expect(model.valid).toEqual(true);
+      expect(model.valid).toBeTruthy();
     });
 
     test('a class should return valid in its static method', () => {
-      expect(() => NoValidationModel.validate({ pk: 123 })).not.toThrowError();
+      const {
+        error,
+        value,
+      } = NoValidationModel.validate({ pk: 123 });
+
+      expect(error).toBeUndefined();
+      expect(value).toStrictEqual({
+        pk: 123,
+      });
     });
   });
 
@@ -50,11 +58,23 @@ describe('Validation', () => {
 
       test('correctly validates the instance', () => {
         const model = new TestModel(validParams);
+        expect(model.validatedAttributes).toBeUndefined();
         expect(model.valid).toBeTruthy();
+        expect(model.error).toBeUndefined();
+        expect(model.validatedAttributes).not.toBeUndefined();
       });
 
       test('correctly validates with the static method', () => {
-        expect(() => TestModel.validate(validParams)).not.toThrowError();
+        const {
+          error,
+          value,
+        } = TestModel.validate(validParams);
+
+        expect(error).toBeUndefined();
+        expect(value).toStrictEqual({
+          pk: '1',
+          sk: '2',
+        });
       });
 
       test('correctly validates the instance when not validated fields are present', () => {
@@ -63,34 +83,28 @@ describe('Validation', () => {
           notSchemaAttribute: 123,
         });
 
+        expect(model.validatedAttributes).toBeUndefined();
         expect(model.valid).toBeTruthy();
+        expect(model.error).toBeUndefined();
+        expect(model.validatedAttributes).not.toBeUndefined();
+        expect(model.validatedAttributes?.notSchemaAttribute).toEqual(123);
       });
 
-      // test('contanis no errors when valid', () => {
-      //   const model = new TestModel({
-      //     ...validParams,
-      //     notSchemaAttribute: 123,
-      //   });
-
-      //   expect(model.errors).toStrictEqual({});
-      // });
-
-      test('does not throw an error when not validated fields are present', () => {
-        expect(() => TestModel.validate({
-          ...validParams,
-          notSchemaAttribute: 123,
-        })).not.toThrowError();
-      });
-
-      test('correctly set the attributes', () => {
-        const model = new TestModel({
+      test('does not return an error when not validated fields are present', () => {
+        const {
+          error,
+          value,
+        } = TestModel.validate({
           ...validParams,
           notSchemaAttribute: 123,
         });
 
-        expect(model.pk).toEqual('1');
-        expect(model.sk).toEqual('2');
-        expect(model.notSchemaAttribute).toEqual(123);
+        expect(error).toBeUndefined();
+        expect(value).toStrictEqual({
+          pk: '1',
+          sk: '2',
+          notSchemaAttribute: 123,
+        });
       });
 
       test('correctly apply joi transformations to the attributes', () => {
@@ -100,9 +114,26 @@ describe('Validation', () => {
           notSchemaAttribute: '  123  ',
         });
 
-        expect(model.validatedAttributes.pk).toEqual('1');
-        expect(model.validatedAttributes.sk).toEqual('2');
-        expect(model.validatedAttributes.notSchemaAttribute).toEqual('  123  ');
+        expect(model.attributes).toStrictEqual({
+          pk: '1',
+          sk: '2',
+          notSchemaAttribute: '  123  ',
+        });
+
+        expect(model.validate()).toStrictEqual({
+          error: undefined,
+          value: {
+            pk: '1',
+            sk: '2',
+            notSchemaAttribute: '  123  ',
+          },
+        });
+
+        expect(model.validatedAttributes).toStrictEqual({
+          pk: '1',
+          sk: '2',
+          notSchemaAttribute: '  123  ',
+        });
       });
     });
 
@@ -114,7 +145,11 @@ describe('Validation', () => {
 
       test('should be invalid', () => {
         const model = new TestModel(invalidParams);
+        expect(model.validatedAttributes).toBeUndefined();
         expect(model.valid).toBeFalsy();
+        expect(model.error).toBeInstanceOf(Joi.ValidationError);
+        expect(model.error?.message).toEqual('"pk" must be a string');
+        expect(model.validatedAttributes).not.toBeUndefined();
       });
 
       test('should reset the errors after the errors are fixed', () => {
@@ -126,12 +161,29 @@ describe('Validation', () => {
         expect(model.error).toBeUndefined();
       });
 
-      test('should throw error on static validate method', () => {
-        expect(() => TestModel.validate(invalidParams)).toThrowError('"pk" must be a string');
+      test('should return error on static validate method', () => {
+        const {
+          error,
+          value,
+        } = TestModel.validate(invalidParams);
+
+        expect(error).toBeInstanceOf(Joi.ValidationError);
+        expect(error?.message).toEqual('"pk" must be a string');
+        expect(value).toStrictEqual({
+          pk: 1,
+          sk: '2',
+        });
       });
 
-      test('should throw both errors on static validade method', () => {
-        expect(() => TestModel.validate({})).toThrow('"pk" is required. "sk" is required');
+      test('should return both errors on static validade method', () => {
+        const {
+          error,
+          value,
+        } = TestModel.validate({});
+
+        expect(error).toBeInstanceOf(Joi.ValidationError);
+        expect(error?.message).toEqual('"pk" is required. "sk" is required');
+        expect(value).toStrictEqual({});
       });
     });
   });
@@ -154,6 +206,8 @@ describe('Validation', () => {
       });
 
       expect(model.valid).toBeFalsy();
+      expect(model.error).toBeInstanceOf(Joi.ValidationError);
+      expect(model.error?.message).toEqual('"value" contains [attribute1] without its required peers [attribute2]');
     });
 
     test('It is not valid when only attribute2 is present', () => {
@@ -163,6 +217,8 @@ describe('Validation', () => {
       });
 
       expect(model.valid).toBeFalsy();
+      expect(model.error).toBeInstanceOf(Joi.ValidationError);
+      expect(model.error?.message).toEqual('"value" contains [attribute2] without its required peers [attribute1]');
     });
 
     test('It is valid when both attribute1 and attribute2 are present', () => {
@@ -173,6 +229,7 @@ describe('Validation', () => {
       });
 
       expect(model.valid).toBeTruthy();
+      expect(model.error).toBeUndefined();
     });
   });
 });

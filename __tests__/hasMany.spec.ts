@@ -1,10 +1,10 @@
 /* eslint-disable max-classes-per-file */
 import * as Joi from 'joi';
 import { Entity } from '../src/lib/Entity';
-import { aliases } from '../src/lib/Decorators/aliases';
-import { hasMany } from '../src/lib/Decorators/hasMany';
-import { prop } from '../src/lib/Decorators/prop';
-import { validate } from '../src/lib/Decorators/validate';
+import { aliases } from '../src/lib/decorators/methods/aliases';
+import { hasMany } from '../src/lib/decorators/methods/relations';
+import { prop } from '../src/lib/decorators/methods/props';
+import { validate } from '../src/lib/decorators/methods/validations';
 
 class ChildModel extends Entity {
   @prop()
@@ -26,9 +26,9 @@ class TestModel extends Entity {
 
   @hasMany(ChildModel, { nestedObject: true })
   @aliases(['childrenAlias'])
-  childrenProperty: ChildModel[];
+  childrenProperty: ChildModel[] | Record<string, any>[];
 
-  @hasMany(ChildModel, { required: true, nestedObject: true, parentPropertyOnChild: 'parent' })
+  @hasMany(ChildModel, { required: true, nestedObject: true })
   requiredChildren: ChildModel[];
 }
 
@@ -49,12 +49,12 @@ class TestModelWithRelated extends Entity {
 describe('Has many', () => {
   test('should set the children correctly', () => {
     const model = new TestModel({ pk: 1, sk: 2 });
-    expect(model.childrenProperty).toEqual([]);
+    expect(model.childrenProperty).toStrictEqual([]);
   });
 
-  test('should let children properties be set by apssing an array of instances', () => {
+  test('should let children properties be set by passing an array of instances', () => {
     const model = new TestModel({ pk: 1, sk: 2 });
-    expect(model.childrenProperty).toEqual([]);
+    expect(model.childrenProperty).toStrictEqual([]);
     model.childrenProperty = [new ChildModel({
       pk: 'child-1',
       sk: 'child-1',
@@ -71,8 +71,8 @@ describe('Has many', () => {
   test('it should work correctly with aliases', () => {
     const model = new TestModel({ pk: 1, sk: 2 });
 
-    expect(model.childrenProperty).toEqual([]);
-    expect(model.childrenAlias).toEqual([]);
+    expect(model.childrenProperty).toStrictEqual([]);
+    expect(model.childrenAlias).toStrictEqual([]);
     model.childrenAlias = [new ChildModel({
       pk: 'child-1',
       sk: 'child-1',
@@ -109,6 +109,15 @@ describe('Has many', () => {
     expect(model.childrenProperty[0].sk).toEqual('5');
   });
 
+  test('should let pushing a new child', () => {
+    const model = new TestModel({ pk: 2, sk: 3 });
+    const newChild = new ChildModel({ pk: '4', sk: '5' });
+    expect(model.childrenProperty[0]).toBeUndefined();
+    model.childrenProperty.push(newChild);
+    expect(model.childrenProperty[0].pk).toEqual('4');
+    expect(model.childrenProperty[0].sk).toEqual('5');
+  });
+
   test('attributes should include the children attributes', () => {
     const model = new TestModel({
       pk: 1,
@@ -122,11 +131,6 @@ describe('Has many', () => {
     expect(model.attributes).toStrictEqual({
       pk: 1,
       sk: 2,
-    });
-
-    expect(model.transformedAttributes).toStrictEqual({
-      pk: 1,
-      sk: 2,
       childrenProperty: [{
         pk: '1',
         sk: '2',
@@ -137,7 +141,7 @@ describe('Has many', () => {
   test('when children is blank, it should not include its key', () => {
     const model = new TestModel({ pk: 1, sk: 2 });
 
-    expect(model.transformedAttributes).toStrictEqual({
+    expect(model.attributes).toStrictEqual({
       pk: 1,
       sk: 2,
     });
@@ -157,7 +161,7 @@ describe('Has many', () => {
     });
 
     expect(model.valid).toBeTruthy();
-    expect(model.transformedAttributes).toStrictEqual({
+    expect(model.attributes).toStrictEqual({
       pk: 1,
       sk: 2,
       childrenProperty: [{
@@ -183,21 +187,20 @@ describe('Has many', () => {
     });
 
     expect(model.valid).toBeFalsy();
-  });
 
-  test('it correctly validates the children when there is no error in the child or parent in the static method', () => {
-    expect(() => TestModel.validate({
+    expect(model.attributes).toStrictEqual({
       pk: 1,
       sk: 2,
       childrenProperty: [{
-        alias1: '1',
         sk: '2',
       }],
       requiredChildren: [{
         pk: '1',
       }],
-    })).not.toThrowError();
+    });
+  });
 
+  test('it correctly validates the children when there is no error in the child or parent in the static method', () => {
     expect(TestModel.validate({
       pk: 1,
       sk: 2,
@@ -208,33 +211,38 @@ describe('Has many', () => {
       requiredChildren: [{
         alias1: '1',
       }],
-    })).toBeTruthy();
-
-    expect(TestModel.validateAttributes({
-      pk: 1,
-      sk: 2,
-      childrenProperty: [{
-        alias1: '1',
-        sk: '2',
-      }],
-      requiredChildren: [{
-        alias1: '1',
-      }],
     })).toStrictEqual({
+      error: undefined,
+      value: {
+        pk: 1,
+        sk: 2,
+        childrenProperty: [{
+          pk: '1',
+          sk: '2',
+        }],
+        requiredChildren: [{
+          pk: '1',
+        }],
+      },
+    });
+  });
+
+  test('it correctly validates the child when validating the parent in the static Method', () => {
+    const {
+      value,
+      error,
+    } = TestModel.validate({
       pk: 1,
       sk: 2,
       childrenProperty: [{
-        pk: '1',
         sk: '2',
       }],
       requiredChildren: [{
         pk: '1',
       }],
     });
-  });
 
-  test('it correctly validates the child when validating the parent in the static Method', () => {
-    expect(() => TestModel.validate({
+    expect(value).toStrictEqual({
       pk: 1,
       sk: 2,
       childrenProperty: [{
@@ -243,21 +251,39 @@ describe('Has many', () => {
       requiredChildren: [{
         pk: '1',
       }],
-    })).toThrowError('"childrenProperty[0].pk" is required');
+    });
+
+    expect(error).toBeInstanceOf(Joi.ValidationError);
+    expect(error?.message).toEqual('"childrenProperty[0].pk" is required');
   });
 
   test('it validates a required hasMany on the static method', () => {
-    expect(() => TestModel.validate({
+    const {
+      value,
+      error,
+    } = TestModel.validate({
       pk: 1,
       sk: 2,
       childrenProperty: [{
         pk: '1',
         sk: '2',
       }],
-    })).toThrowError('"requiredChildren" is required');
+    });
+
+    expect(value).toStrictEqual({
+      pk: 1,
+      sk: 2,
+      childrenProperty: [{
+        pk: '1',
+        sk: '2',
+      }],
+    });
+
+    expect(error).toBeInstanceOf(Joi.ValidationError);
+    expect(error?.message).toEqual('"requiredChildren" is required');
   });
 
-  test('it validates a required hasMany on the instace method', () => {
+  test('it validates a required hasMany on the instance method', () => {
     const model = new TestModel({
       pk: 1,
       sk: 2,
@@ -269,6 +295,7 @@ describe('Has many', () => {
 
     expect(model.valid).toBeFalsy();
     expect(model.error).toBeInstanceOf(Joi.ValidationError);
+    expect(model.error?.message).toEqual('"requiredChildren" is required');
   });
 
   describe('Related models', () => {
@@ -278,7 +305,8 @@ describe('Has many', () => {
         sk: 2,
       });
 
-      expect(() => model.validate(true)).toThrowError('"requiredChildren" is required');
+      model.validate();
+      expect(model.error?.message).toEqual('"requiredChildren" is required');
       expect(model.valid).toBeFalsy();
     });
 
@@ -327,6 +355,7 @@ describe('Has many', () => {
 
       expect(model.valid).toBeFalsy();
       expect(model.error).toBeInstanceOf(Joi.ValidationError);
+      expect(model.error?.message).toEqual('"requiredChildren[0].pk" is required');
     });
 
     test('When both children are present and the not required one is invalid, the parent is invalid', () => {
@@ -344,9 +373,10 @@ describe('Has many', () => {
 
       expect(model.valid).toBeFalsy();
       expect(model.error).toBeInstanceOf(Joi.ValidationError);
+      expect(model.error?.message).toEqual('"childrenProperty[0].pk" is required');
     });
 
-    test('When both are valid, the attributes does not include the not nested models', () => {
+    test('When both are valid, the attributes include the not nested models', () => {
       const model = new TestModelWithRelated({
         pk: 1,
         sk: 2,
@@ -360,13 +390,23 @@ describe('Has many', () => {
         }],
       });
 
+      model.validate();
+
       expect(model.validatedAttributes).toStrictEqual({
         pk: 1,
         sk: 2,
+        childrenProperty: [{
+          pk: '1',
+          sk: '2',
+        }],
+        requiredChildren: [{
+          pk: '1',
+          sk: '2',
+        }],
       });
     });
 
-    test('When both are invalid, the attributes does not include the not nested models', () => {
+    test('When both are invalid, the attributes does include the not nested models but error is present', () => {
       const model = new TestModelWithRelated({
         pk: 1,
         sk: 2,
@@ -378,17 +418,80 @@ describe('Has many', () => {
         }],
       });
 
+      model.validate();
+
       expect(model.validatedAttributes).toStrictEqual({
         pk: 1,
         sk: 2,
+        childrenProperty: [{
+          sk: '2',
+        }],
+        requiredChildren: [{
+          sk: '2',
+        }],
       });
+
+      expect(model.error).toBeInstanceOf(Joi.ValidationError);
+      expect(model.error?.message).toEqual('"childrenProperty[0].pk" is required. "requiredChildren[0].pk" is required');
     });
   });
 
-  describe('Belongs To', () => {
-    test('It correctly sets the getters and setters of the child', () => {
-      const child = new ChildModel();
-      expect(child.parent).toBeInstanceOf(TestModel);
+  describe('Child parent instance', () => {
+    test('It should not instantiate anything when there is not parent', () => {
+      const model = new ChildModel({
+        pk: '1',
+        sk: '2',
+      });
+
+      expect(model.parents).toStrictEqual([]);
+    });
+
+    test('It should be correctly set when instantiating the parent with it', () => {
+      const model = new TestModel({
+        pk: 1,
+        sk: 2,
+        childrenProperty: [{
+          pk: '1',
+          sk: '2',
+        }],
+      });
+
+      expect(model.childrenProperty[0].parents).toStrictEqual([model]);
+    });
+
+    test('It should be correctly set when setting instances after the parent is already instantiated', () => {
+      const model = new TestModel({
+        pk: 1,
+        sk: 2,
+      });
+
+      model.childrenProperty = [new ChildModel({
+        pk: '1',
+        sk: '2',
+      })];
+
+      expect(model.childrenProperty[0].parents).toStrictEqual([model]);
+    });
+
+    test('It should be correctly set when setting objects after the parent is already instantiated', () => {
+      const model = new TestModel({
+        pk: 1,
+        sk: 2,
+      });
+
+      model.childrenProperty = [{
+        pk: '1',
+        sk: '2',
+      }];
+
+      expect(model.childrenProperty[0].parents).toStrictEqual([model]);
     });
   });
+
+  // describe('Belongs To', () => {
+  //   test('It correctly sets the getters and setters of the child', () => {
+  //     const child = new ChildModel();
+  //     expect(child.parent).toBeInstanceOf(TestModel);
+  //   });
+  // });
 });

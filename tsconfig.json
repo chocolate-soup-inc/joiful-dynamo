@@ -10,7 +10,7 @@
     "forceConsistentCasingInFileNames": true,
     "inlineSourceMap": true,
     "inlineSources": true,
-    "lib": ["es2017"],
+    "lib": ["es2017", "dom"],
     "module": "commonjs",
     "moduleResolution": "node",
     "noImplicitAny": false,
@@ -36,6 +36,7 @@
     "__tests__/**/*","./*.ts",
     "./*.js",
     "./*.json",
+    "jest.config.ts",
     "jest-dynamodb-config.js",
     "tsconfig.json",
     "./lib/**/*",
@@ -45,8 +46,7 @@
   ],
   "typedocOptions": {
     "entryPoints": [
-      "./src/lib/Entity",
-      "./src/lib/Decorators",
+      "./src/index.ts",
     ],
     "excludePrivate": true,
     "excludeProtected": true,
