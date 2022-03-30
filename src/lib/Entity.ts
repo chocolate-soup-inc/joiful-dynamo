@@ -236,6 +236,8 @@ export class Entity {
   }
 
   get dbParentForeignKeys() {
+    const transformedAttributes = this.transformAttributes();
+
     return this.parentRelations.reduce((agg, rel) => {
       const {
         foreignKey,
@@ -243,7 +245,7 @@ export class Entity {
       } = rel;
 
       if (foreignKey) {
-        const value = this[foreignKey];
+        const value = transformedAttributes[foreignKey];
 
         if (typeof value === 'string' && !value.startsWith(ParentModel._entityPrefix)) {
           agg[foreignKey] = `${ParentModel._entityPrefix}${value}`;
@@ -257,13 +259,15 @@ export class Entity {
   }
 
   get dbChildrenForeignKeys() {
+    const transformedAttributes = this.transformAttributes();
+
     return this.childrenRelations.reduce((agg, rel) => {
       const {
         foreignKey,
       } = rel;
 
       if (foreignKey != null && this._primaryKey != null) {
-        agg[foreignKey] = `${this._entityPrefix}${this[foreignKey]}`;
+        agg[foreignKey] = `${this._entityPrefix}${transformedAttributes[foreignKey]}`;
       }
 
       return agg;
