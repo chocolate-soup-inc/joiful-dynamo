@@ -245,7 +245,7 @@ export class Entity {
       } = rel;
 
       if (foreignKey) {
-        const value = transformedAttributes[foreignKey];
+        const value = this[foreignKey] || transformedAttributes[foreignKey];
 
         if (typeof value === 'string' && !value.startsWith(ParentModel._entityPrefix)) {
           agg[foreignKey] = `${ParentModel._entityPrefix}${value}`;
@@ -267,7 +267,7 @@ export class Entity {
       } = rel;
 
       if (foreignKey != null && this._primaryKey != null) {
-        agg[foreignKey] = `${this._entityPrefix}${transformedAttributes[foreignKey]}`;
+        agg[foreignKey] = `${this._entityPrefix}${this[foreignKey] || transformedAttributes[foreignKey]}`;
       }
 
       return agg;
@@ -279,9 +279,9 @@ export class Entity {
 
     const transformedAttributes = this.transformAttributes();
 
-    if (this._primaryKey) dbKey[this._primaryKey] = transformedAttributes[this._primaryKey];
+    if (this._primaryKey) dbKey[this._primaryKey] = this[this._primaryKey] || transformedAttributes[this._primaryKey];
 
-    if (this._secondaryKey) dbKey[this._secondaryKey] = transformedAttributes[this._secondaryKey];
+    if (this._secondaryKey) dbKey[this._secondaryKey] = this[this._secondaryKey] || transformedAttributes[this._secondaryKey];
 
     if (this._primaryKey && this._secondaryKey && dbKey[this._secondaryKey] == null) {
       dbKey[this._secondaryKey] = dbKey[this._primaryKey];
