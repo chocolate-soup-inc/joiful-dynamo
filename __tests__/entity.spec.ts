@@ -89,12 +89,12 @@ class CustomTransformationsModel extends Entity {
     return attributes;
   }
 
-  @prop()
+  @prop({ primaryKey: true })
   @validate(Joi.number().empty(Joi.valid(null, '')))
   @aliases(['alias1'])
   p1: number;
 
-  @prop()
+  @prop({ secondaryKey: true })
   @validate(Joi.number().required())
   p2: number;
 }
@@ -540,6 +540,17 @@ describe('Entity', () => {
 
       expect(instance.valid).toBeFalsy();
       expect(instance.validatedAttributes).toBeUndefined();
+    });
+
+    test('It should correctly set the dbKey', () => {
+      const instance = new CustomTransformationsModel({
+        alias1: 1,
+      });
+
+      expect(instance.dbKey).toStrictEqual({
+        p1: 'CustomTransformationsModel-1',
+        p2: 'CustomTransformationsModel-2',
+      });
     });
   });
 });

@@ -273,9 +273,11 @@ export class Entity {
   get dbKey() {
     const dbKey = {};
 
-    if (this._primaryKey) dbKey[this._primaryKey] = this.getAttribute(this._primaryKey);
+    const transformedAttributes = this.transformAttributes();
 
-    if (this._secondaryKey) dbKey[this._secondaryKey] = this.getAttribute(this._secondaryKey);
+    if (this._primaryKey) dbKey[this._primaryKey] = transformedAttributes[this._primaryKey];
+
+    if (this._secondaryKey) dbKey[this._secondaryKey] = transformedAttributes[this._secondaryKey];
 
     if (this._primaryKey && this._secondaryKey && dbKey[this._secondaryKey] == null) {
       dbKey[this._secondaryKey] = dbKey[this._primaryKey];
