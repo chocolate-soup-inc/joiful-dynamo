@@ -81,6 +81,24 @@ class ExtendedTestModel extends TestModel {
   p2NotNestedOne: TestChildModel;
 }
 
+class CustomTransformationsModel extends Entity {
+  public transformAttributes() {
+    const attributes = super.transformAttributes();
+    if (attributes.p1 != null) attributes.p2 = attributes.p1 + 1;
+
+    return attributes;
+  }
+
+  @prop()
+  @validate(Joi.number().empty(Joi.valid(null, '')))
+  @aliases(['alias1'])
+  p1: number;
+
+  @prop()
+  @validate(Joi.number().required())
+  p2: number;
+}
+
 describe('Entity', () => {
   test('Testing the property and attribute list methods', () => {
     const testModel = new TestModel({
@@ -467,6 +485,61 @@ describe('Entity', () => {
         expect(error).toBeInstanceOf(Joi.ValidationError);
         expect(error?.message).toEqual('"p1NotNestedOne.p1Child" is required');
       });
+    });
+  });
+
+  describe('Testing custom transform method', () => {
+    test('It should correctly override the transform with no alias', () => {
+      const instance = new CustomTransformationsModel({
+        p1: 1,
+      });
+
+      expect(instance.attributes).toStrictEqual({
+        p1: 1,
+      });
+
+      expect(instance.transformAttributes()).toStrictEqual({
+        p1: 1,
+        p2: 2,
+      });
+
+      expect(instance.valid).toBeTruthy();
+      expect(instance.validatedAttributes).toStrictEqual({
+        p1: 1,
+        p2: 2,
+      });
+    });
+
+    test('It should correctly override the transform with alias', () => {
+      const instance = new CustomTransformationsModel({
+        alias1: 1,
+      });
+
+      expect(instance.attributes).toStrictEqual({
+        p1: 1,
+      });
+
+      expect(instance.transformAttributes()).toStrictEqual({
+        p1: 1,
+        p2: 2,
+      });
+
+      expect(instance.valid).toBeTruthy();
+      expect(instance.validatedAttributes).toStrictEqual({
+        p1: 1,
+        p2: 2,
+      });
+    });
+
+    test('It should work correctly with nothing set', () => {
+      const instance = new CustomTransformationsModel();
+
+      expect(instance.attributes).toStrictEqual({});
+
+      expect(instance.transformAttributes()).toStrictEqual({});
+
+      expect(instance.valid).toBeFalsy();
+      expect(instance.validatedAttributes).toBeUndefined();
     });
   });
 });

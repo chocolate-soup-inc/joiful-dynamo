@@ -20,6 +20,9 @@ class TestModel extends Entity {
 
   @validate(Joi.string())
   attribute2: string;
+
+  @validate(Joi.string().default('defaultValue'))
+  attributeWithDefault: string;
 }
 
 describe('Validation', () => {
@@ -74,6 +77,7 @@ describe('Validation', () => {
         expect(value).toStrictEqual({
           pk: '1',
           sk: '2',
+          attributeWithDefault: 'defaultValue',
         });
       });
 
@@ -104,6 +108,7 @@ describe('Validation', () => {
           pk: '1',
           sk: '2',
           notSchemaAttribute: 123,
+          attributeWithDefault: 'defaultValue',
         });
       });
 
@@ -126,6 +131,7 @@ describe('Validation', () => {
             pk: '1',
             sk: '2',
             notSchemaAttribute: '  123  ',
+            attributeWithDefault: 'defaultValue',
           },
         });
 
@@ -133,6 +139,7 @@ describe('Validation', () => {
           pk: '1',
           sk: '2',
           notSchemaAttribute: '  123  ',
+          attributeWithDefault: 'defaultValue',
         });
       });
     });
@@ -172,6 +179,7 @@ describe('Validation', () => {
         expect(value).toStrictEqual({
           pk: 1,
           sk: '2',
+          attributeWithDefault: 'defaultValue',
         });
       });
 
@@ -183,7 +191,9 @@ describe('Validation', () => {
 
         expect(error).toBeInstanceOf(Joi.ValidationError);
         expect(error?.message).toEqual('"pk" is required. "sk" is required');
-        expect(value).toStrictEqual({});
+        expect(value).toStrictEqual({
+          attributeWithDefault: 'defaultValue',
+        });
       });
     });
   });

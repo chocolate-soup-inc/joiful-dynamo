@@ -186,7 +186,7 @@ export class Entity {
     let properties = this._currentPrototypePropertyList;
 
     if (Entity.prototype.isPrototypeOf(this.constructor.prototype)) {
-      const Model: typeof Entity = Object.getPrototypeOf(this);
+      const Model: typeof Entity = this.constructor.prototype;
       properties = properties.concat(Object.getPrototypeOf(Model)._currentPrototypePropertyList);
     }
 
@@ -207,8 +207,8 @@ export class Entity {
     let attributes = this.currentPrototypeAttributeList;
 
     if (Entity.prototype.isPrototypeOf(this.constructor.prototype)) {
-      const Model: typeof Entity = Object.getPrototypeOf(this);
-      attributes = attributes.concat(Object.getPrototypeOf(Model).currentPrototypeAttributeList);
+      const Model: typeof Entity = this.constructor.prototype;
+      attributes = attributes.concat(Object.getPrototypeOf(Model).attributeList);
     }
 
     return _.compact(attributes);
