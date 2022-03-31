@@ -163,7 +163,7 @@ export class DynamoEntity extends Entity {
             TableName: this._tableName,
             IndexName: relation.opts?.indexName,
             ExpressionAttributeNames: { '#fk': relation.foreignKey },
-            ExpressionAttributeValues: { ':fk': `${this._entityPrefix}${this[relation.foreignKey]}` },
+            ExpressionAttributeValues: { ':fk': `${this._entityPrefix}${this.transformAttributes()[relation.foreignKey] || this[relation.foreignKey]}` },
             KeyConditionExpression: '#fk = :fk',
           },
           relation,
