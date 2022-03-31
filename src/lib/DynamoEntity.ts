@@ -153,17 +153,23 @@ export class DynamoEntity extends Entity {
     }[] = [];
 
     for (const relation of relations) {
+      const {
+        opts,
+        foreignKey,
+      } = relation;
+
       if (
-        relation.opts?.nestedObject !== true
-        && relation.opts?.indexName != null
-        && relation.foreignKey != null
+        opts?.nestedObject !== true
+        && opts?.indexName != null
+        && foreignKey != null
       ) {
+        const transformedAttributes = this.transformAttributes();
         queries.push({
           queryOpts: {
             TableName: this._tableName,
-            IndexName: relation.opts?.indexName,
-            ExpressionAttributeNames: { '#fk': relation.foreignKey },
-            ExpressionAttributeValues: { ':fk': `${this._entityPrefix}${this.transformAttributes()[relation.foreignKey] || this[relation.foreignKey]}` },
+            IndexName: opts?.indexName,
+            ExpressionAttributeNames: { '#fk': foreignKey },
+            ExpressionAttributeValues: { ':fk': `${this._entityPrefix}${transformedAttributes[foreignKey] || this[foreignKey]}` },
             KeyConditionExpression: '#fk = :fk',
           },
           relation,
