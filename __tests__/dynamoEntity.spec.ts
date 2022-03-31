@@ -6,6 +6,7 @@ import {
   GetCommand,
 } from '@aws-sdk/lib-dynamodb';
 
+import _ from 'lodash';
 import { DynamoPaginator } from '../src/lib/DynamoPaginator';
 import { DynamoEntity as Entity } from '../src/lib/DynamoEntity';
 import { prop } from '../src/lib/decorators/methods/props';
@@ -16,6 +17,7 @@ import { hasMany, hasOne } from '../src/lib/decorators/methods/relations';
 const tableName = 'test-table';
 const onlyPkTableName = 'test-only-pk';
 const foreignSkTableName = 'test-foreign-sk';
+const relationsTableName = 'test-relations-table';
 
 @table(tableName)
 class TestModel extends Entity {
@@ -1388,5 +1390,97 @@ describe('Dynamo Entity', () => {
         _fk: 'ModelWithForeignSecondaryKey-2',
       });
     });
+  });
+});
+
+@table(relationsTableName)
+class ChildModel extends Entity {
+  @prop({ primaryKey: true })
+  pk: string;
+
+  @prop({ secondaryKey: true })
+  sk: string;
+
+  @prop()
+  _fk: string;
+}
+
+@table(relationsTableName)
+class ParentModel extends Entity {
+  protected transformAttributes() {
+    const attributes = super.transformAttributes();
+
+    if (!_.isEmpty(attributes.pk) && !_.isEmpty(attributes.sk)) {
+      attributes._fk = `${attributes.pk}-${attributes.sk}`;
+    }
+
+    return attributes;
+  }
+
+  @prop({ primaryKey: true })
+  pk: string;
+
+  @prop({ secondaryKey: true })
+  sk: string;
+
+  @prop()
+  _fk: string;
+
+  @hasOne(ChildModel, { nestedObject: false, foreignKey: '_fk', indexName: 'byFK' })
+  child: ChildModel;
+
+  @hasMany(ChildModel, { nestedObject: false, foreignKey: '_fk', indexName: 'byFK' })
+  children: ChildModel[];
+}
+
+describe('Dynamo Entity with transform attributes setting the _fk', () => {
+  beforeEach(async () => {
+    await dynamodbDocumentClient.send(new BatchWriteCommand({
+      RequestItems: {
+        [relationsTableName]: [{
+          PutRequest: {
+            Item: {
+              pk: 'ChildModel-3',
+              sk: 'ChildModel-4',
+              _fk: 'ParentModel-1-2',
+              _entityName: 'ChildModel',
+            },
+          },
+        }],
+      },
+    }));
+  });
+
+  afterEach(async () => {
+    for (const Model of [ChildModel, ParentModel]) {
+      const {
+        items,
+      } = await Model.scanAll();
+
+      for (const item of items) {
+        await Model.deleteItem(item.attributes);
+      }
+    }
+  });
+
+  test('It correctly loads the related using the transformAttributes when the _fk is not present', async () => {
+    const parent = new ParentModel({ pk: '1', sk: '2' });
+    // FK SET AUTOMATICALLY AS PARENT TRANSFORMED _FK BUT IT IS A BLANK CHILD
+    expect(parent.child.attributes).toStrictEqual({ _fk: '1-2' });
+    expect(parent.children).toHaveLength(0);
+    await parent.loadWithRelated();
+    expect(parent.child.attributes).toStrictEqual({ pk: '3', sk: '4', _fk: '1-2' });
+    expect(parent.children).toHaveLength(1);
+    expect(parent.children[0].attributes).toStrictEqual(parent.child.attributes);
+  });
+
+  test('When the parent transform attributes does not set the _fk', async () => {
+    const parent = new ParentModel({ pk: '1' });
+    // FK SET AUTOMATICALLY AS PARENT PK BECAUSE TRANSFORMED _FK IS BLANK
+    expect(parent.child.attributes).toStrictEqual({ _fk: '1' });
+    expect(parent.children).toHaveLength(0);
+    await parent.loadWithRelated();
+    expect(parent.child.attributes).toStrictEqual({ _fk: '1' });
+    expect(parent.children).toHaveLength(0);
   });
 });

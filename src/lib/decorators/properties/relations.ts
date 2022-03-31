@@ -34,7 +34,7 @@ function hasOneSetter(
     throw new Error(`Bad argument error for ${propertyName}. It should be an instance of ${ChildModel._entityName}`);
   }
 
-  if (foreignKey) finalvalue[foreignKey] = target[foreignKey];
+  if (foreignKey) finalvalue[foreignKey] = target.transformAttributes()[foreignKey] || target[foreignKey];
 
   return target.setAttribute(propertyName, finalvalue);
 }
@@ -67,7 +67,7 @@ function hasManySetter(
 
   if (foreignKey) {
     finalValue.forEach((v) => {
-      v[foreignKey] = target[foreignKey];
+      v[foreignKey] = target.transformAttributes()[foreignKey] || target[foreignKey];
     });
   }
 
