@@ -1406,6 +1406,9 @@ class ChildModel extends Entity {
 }
 
 @table(relationsTableName)
+class ChildModel2 extends ChildModel {}
+
+@table(relationsTableName)
 class ParentModel extends Entity {
   protected transformAttributes() {
     const attributes = super.transformAttributes();
@@ -1426,6 +1429,9 @@ class ParentModel extends Entity {
   @prop()
   _fk: string;
 
+  @hasOne(ChildModel2, { nestedObject: true })
+  child2: ChildModel2;
+
   @hasOne(ChildModel, { nestedObject: false, foreignKey: '_fk', indexName: 'byFK' })
   child: ChildModel;
 
@@ -1434,23 +1440,6 @@ class ParentModel extends Entity {
 }
 
 describe('Dynamo Entity with transform attributes setting the _fk', () => {
-  beforeEach(async () => {
-    await dynamodbDocumentClient.send(new BatchWriteCommand({
-      RequestItems: {
-        [relationsTableName]: [{
-          PutRequest: {
-            Item: {
-              pk: 'ChildModel-3',
-              sk: 'ChildModel-4',
-              _fk: 'ParentModel-1-2',
-              _entityName: 'ChildModel',
-            },
-          },
-        }],
-      },
-    }));
-  });
-
   afterEach(async () => {
     for (const Model of [ChildModel, ParentModel]) {
       const {
@@ -1463,24 +1452,75 @@ describe('Dynamo Entity with transform attributes setting the _fk', () => {
     }
   });
 
-  test('It correctly loads the related using the transformAttributes when the _fk is not present', async () => {
-    const parent = new ParentModel({ pk: '1', sk: '2' });
-    // FK SET AUTOMATICALLY AS PARENT TRANSFORMED _FK BUT IT IS A BLANK CHILD
-    expect(parent.child.attributes).toStrictEqual({ _fk: '1-2' });
-    expect(parent.children).toHaveLength(0);
-    await parent.loadWithRelated();
-    expect(parent.child.attributes).toStrictEqual({ pk: '3', sk: '4', _fk: '1-2' });
-    expect(parent.children).toHaveLength(1);
-    expect(parent.children[0].attributes).toStrictEqual(parent.child.attributes);
+  describe('When there is a child', () => {
+    beforeEach(async () => {
+      await dynamodbDocumentClient.send(new BatchWriteCommand({
+        RequestItems: {
+          [relationsTableName]: [{
+            PutRequest: {
+              Item: {
+                pk: 'ChildModel-3',
+                sk: 'ChildModel-4',
+                _fk: 'ParentModel-1-2',
+                _entityName: 'ChildModel',
+              },
+            },
+          }],
+        },
+      }));
+    });
+
+    test('It correctly loads the related using the transformAttributes when the _fk is not present', async () => {
+      const parent = new ParentModel({ pk: '1', sk: '2' });
+      // FK SET AUTOMATICALLY AS PARENT TRANSFORMED _FK BUT IT IS A BLANK CHILD
+      expect(parent.child.attributes).toStrictEqual({ _fk: '1-2' });
+      expect(parent.children).toHaveLength(0);
+      await parent.loadWithRelated();
+      expect(parent.child.attributes).toStrictEqual({ pk: '3', sk: '4', _fk: '1-2' });
+      expect(parent.children).toHaveLength(1);
+      expect(parent.children[0].attributes).toStrictEqual(parent.child.attributes);
+    });
+
+    test('When the parent transform attributes does not set the _fk', async () => {
+      const parent = new ParentModel({ pk: '1' });
+      // FK SET AUTOMATICALLY AS PARENT PK BECAUSE TRANSFORMED _FK IS BLANK
+      expect(parent.child.attributes).toStrictEqual({ _fk: '1' });
+      expect(parent.children).toHaveLength(0);
+      await parent.loadWithRelated();
+      expect(parent.child.attributes).toStrictEqual({ _fk: '1' });
+      expect(parent.children).toHaveLength(0);
+    });
   });
 
-  test('When the parent transform attributes does not set the _fk', async () => {
-    const parent = new ParentModel({ pk: '1' });
-    // FK SET AUTOMATICALLY AS PARENT PK BECAUSE TRANSFORMED _FK IS BLANK
-    expect(parent.child.attributes).toStrictEqual({ _fk: '1' });
-    expect(parent.children).toHaveLength(0);
-    await parent.loadWithRelated();
-    expect(parent.child.attributes).toStrictEqual({ _fk: '1' });
-    expect(parent.children).toHaveLength(0);
+  describe('When there is no child', () => {
+    test('The create method works as expected', async () => {
+      let { items: parents } = await ParentModel.scanAll();
+      expect(parents).toHaveLength(0);
+
+      const parent = new ParentModel({ pk: '1', sk: '2', child2: { pk: '3', sk: '4' } });
+      await parent.create();
+
+      ({ items: parents } = await ParentModel.scanAll());
+      expect(parents).toHaveLength(1);
+      expect(parents[0].child2.attributes).toStrictEqual({
+        pk: '3',
+        sk: '4',
+      });
+    });
+
+    test('The create update method works as expected', async () => {
+      let { items: parents } = await ParentModel.scanAll();
+      expect(parents).toHaveLength(0);
+
+      const parent = new ParentModel({ pk: '1', sk: '2', child2: { pk: '3', sk: '4' } });
+      await parent.update();
+
+      ({ items: parents } = await ParentModel.scanAll());
+      expect(parents).toHaveLength(1);
+      expect(parents[0].child2.attributes).toStrictEqual({
+        pk: '3',
+        sk: '4',
+      });
+    });
   });
 });

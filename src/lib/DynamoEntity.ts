@@ -342,7 +342,7 @@ export class DynamoEntity extends Entity {
     const attributes = this.dbAttributes;
 
     Object.entries(attributes).forEach(([key]) => {
-      const childRelation = this.childrenRelations.find((rel) => rel.propertyName === key);
+      const childRelation = this.childrenRelations.find((rel) => rel.propertyName === key && rel.opts?.nestedObject === false);
       if (childRelation) {
         if (childRelation.type === 'hasMany') {
           this[key].forEach((i) => {
@@ -384,7 +384,7 @@ export class DynamoEntity extends Entity {
     const attributes = this.dbAttributes;
 
     Object.entries(attributes).forEach(([key]) => {
-      const childRelation = this.childrenRelations.find((rel) => rel.propertyName === key);
+      const childRelation = this.childrenRelations.find((rel) => rel.propertyName === key && rel.opts?.nestedObject === false);
       if (childRelation) {
         if (childRelation.type === 'hasMany') {
           this[key].forEach((i) => {
