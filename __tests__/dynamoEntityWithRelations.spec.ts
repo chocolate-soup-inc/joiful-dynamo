@@ -75,26 +75,9 @@ class ParentModel extends Entity {
 
 describe('Dynamo Entity Relations', () => {
   afterEach(async () => {
-    const {
-      items: parentItems,
-    } = await ParentModel.scanAll();
-
-    for (const parentItem of parentItems) {
-      await ParentModel.deleteItem({
-        pk: parentItem.pk,
-        sk: parentItem.sk,
-      });
-    }
-
-    const {
-      items: childItems,
-    } = await ChildModel.scanAll();
-
-    for (const childItem of childItems) {
-      await ChildModel.deleteItem({
-        pk: childItem.pk,
-        sk: childItem.sk,
-      });
+    for (const Model of [ParentModel, ChildModel, ChildModel2]) {
+      const { items } = await Model.scanAll();
+      await Promise.all(items.map((item) => item.delete()));
     }
   });
 
@@ -950,114 +933,198 @@ describe('Dynamo Entity Relations', () => {
   });
 
   describe('deleteWithChildren', () => {
-    beforeEach(async () => {
-      await dynamodbDocumentClient.send(new BatchWriteCommand({
-        RequestItems: {
-          [tableName]: [{
-            PutRequest: {
-              Item: {
-                pk: 'ParentModel-1',
-                sk: 'ParentModel-1',
-                _entityName: 'ParentModel',
-                _fk: 'ParentModel-1',
-                name: 'Old Name',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
+    describe('When there are children', () => {
+      beforeEach(async () => {
+        await dynamodbDocumentClient.send(new BatchWriteCommand({
+          RequestItems: {
+            [tableName]: [{
+              PutRequest: {
+                Item: {
+                  pk: 'ParentModel-1',
+                  sk: 'ParentModel-1',
+                  _entityName: 'ParentModel',
+                  _fk: 'ParentModel-1',
+                  name: 'Old Name',
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                },
               },
-            },
-          }, {
-            PutRequest: {
-              Item: {
-                pk: 'ChildModel-2',
-                sk: 'ChildModel-2',
-                _entityName: 'ChildModel',
-                _fk: 'ParentModel-1',
-                name: 'Child Model Name',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
+            }, {
+              PutRequest: {
+                Item: {
+                  pk: 'ChildModel-2',
+                  sk: 'ChildModel-2',
+                  _entityName: 'ChildModel',
+                  _fk: 'ParentModel-1',
+                  name: 'Child Model Name',
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                },
               },
-            },
-          }, {
-            PutRequest: {
-              Item: {
-                pk: 'ChildModel2-2',
-                sk: 'ChildModel2-2',
-                _entityName: 'ChildModel2',
-                _fk: 'ParentModel-1',
-                name: 'Child Model 2 Name',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
+            }, {
+              PutRequest: {
+                Item: {
+                  pk: 'ChildModel2-2',
+                  sk: 'ChildModel2-2',
+                  _entityName: 'ChildModel2',
+                  _fk: 'ParentModel-1',
+                  name: 'Child Model 2 Name',
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                },
               },
-            },
-          }],
-        },
-      }));
-    });
-
-    test('It should correctly delete all the entities with the delete all method', async () => {
-      let { items: parentItems } = await ParentModel.scanAll();
-      expect(parentItems).toHaveLength(1);
-
-      let { items: childItems } = await ChildModel.scanAll();
-      expect(childItems).toHaveLength(1);
-
-      let { items: child2Items } = await ChildModel2.scanAll();
-      expect(child2Items).toHaveLength(1);
-
-      const parent = await ParentModel.getItemWithRelated({
-        pk: '1',
-        sk: '1',
+            }],
+          },
+        }));
       });
 
-      expect(parent.child.name).toEqual('Child Model Name');
-      expect(parent.children).toHaveLength(1);
-      expect(parent.children[0].name).toEqual('Child Model Name');
-      expect(parent.children2).toHaveLength(1);
-      expect(parent.children2[0].name).toEqual('Child Model 2 Name');
+      test('It should correctly delete all the entities with the delete all method', async () => {
+        let { items: parentItems } = await ParentModel.scanAll();
+        expect(parentItems).toHaveLength(1);
 
-      await parent.deleteWithChildren();
+        let { items: childItems } = await ChildModel.scanAll();
+        expect(childItems).toHaveLength(1);
 
-      ({ items: parentItems } = await ParentModel.scanAll());
-      expect(parentItems).toHaveLength(0);
+        let { items: child2Items } = await ChildModel2.scanAll();
+        expect(child2Items).toHaveLength(1);
 
-      ({ items: childItems } = await ChildModel.scanAll());
-      expect(childItems).toHaveLength(0);
+        const parent = await ParentModel.getItemWithRelated({
+          pk: '1',
+          sk: '1',
+        });
 
-      ({ items: child2Items } = await ChildModel2.scanAll());
-      expect(child2Items).toHaveLength(0);
-    });
+        expect(parent.child.name).toEqual('Child Model Name');
+        expect(parent.children).toHaveLength(1);
+        expect(parent.children[0].name).toEqual('Child Model Name');
+        expect(parent.children2).toHaveLength(1);
+        expect(parent.children2[0].name).toEqual('Child Model 2 Name');
 
-    test('It should correctly delete only the parent entity with the delete method', async () => {
-      let { items: parentItems } = await ParentModel.scanAll();
-      expect(parentItems).toHaveLength(1);
+        await parent.deleteWithChildren();
 
-      let { items: childItems } = await ChildModel.scanAll();
-      expect(childItems).toHaveLength(1);
+        ({ items: parentItems } = await ParentModel.scanAll());
+        expect(parentItems).toHaveLength(0);
 
-      let { items: child2Items } = await ChildModel2.scanAll();
-      expect(child2Items).toHaveLength(1);
+        ({ items: childItems } = await ChildModel.scanAll());
+        expect(childItems).toHaveLength(0);
 
-      const parent = await ParentModel.getItemWithRelated({
-        pk: '1',
-        sk: '1',
+        ({ items: child2Items } = await ChildModel2.scanAll());
+        expect(child2Items).toHaveLength(0);
       });
 
-      expect(parent.child.name).toEqual('Child Model Name');
-      expect(parent.children).toHaveLength(1);
-      expect(parent.children[0].name).toEqual('Child Model Name');
-      expect(parent.children2).toHaveLength(1);
-      expect(parent.children2[0].name).toEqual('Child Model 2 Name');
+      test('It should correctly delete only the parent entity with the delete method', async () => {
+        let { items: parentItems } = await ParentModel.scanAll();
+        expect(parentItems).toHaveLength(1);
 
-      await parent.delete();
+        let { items: childItems } = await ChildModel.scanAll();
+        expect(childItems).toHaveLength(1);
 
-      ({ items: parentItems } = await ParentModel.scanAll());
-      expect(parentItems).toHaveLength(0);
+        let { items: child2Items } = await ChildModel2.scanAll();
+        expect(child2Items).toHaveLength(1);
 
-      ({ items: childItems } = await ChildModel.scanAll());
-      expect(childItems).toHaveLength(1);
+        const parent = await ParentModel.getItemWithRelated({
+          pk: '1',
+          sk: '1',
+        });
 
-      ({ items: child2Items } = await ChildModel2.scanAll());
-      expect(child2Items).toHaveLength(1);
+        expect(parent.child.name).toEqual('Child Model Name');
+        expect(parent.children).toHaveLength(1);
+        expect(parent.children[0].name).toEqual('Child Model Name');
+        expect(parent.children2).toHaveLength(1);
+        expect(parent.children2[0].name).toEqual('Child Model 2 Name');
+
+        await parent.delete();
+
+        ({ items: parentItems } = await ParentModel.scanAll());
+        expect(parentItems).toHaveLength(0);
+
+        ({ items: childItems } = await ChildModel.scanAll());
+        expect(childItems).toHaveLength(1);
+
+        ({ items: child2Items } = await ChildModel2.scanAll());
+        expect(child2Items).toHaveLength(1);
+      });
+    });
+
+    describe('When there is no children', () => {
+      beforeEach(async () => {
+        await dynamodbDocumentClient.send(new BatchWriteCommand({
+          RequestItems: {
+            [tableName]: [{
+              PutRequest: {
+                Item: {
+                  pk: 'ParentModel-1',
+                  sk: 'ParentModel-1',
+                  _entityName: 'ParentModel',
+                  _fk: 'ParentModel-1',
+                  name: 'Old Name',
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                },
+              },
+            }],
+          },
+        }));
+      });
+
+      test('It should correctly delete all the entities with the delete all method', async () => {
+        let { items: parentItems } = await ParentModel.scanAll();
+        expect(parentItems).toHaveLength(1);
+
+        let { items: childItems } = await ChildModel.scanAll();
+        expect(childItems).toHaveLength(0);
+
+        let { items: child2Items } = await ChildModel2.scanAll();
+        expect(child2Items).toHaveLength(0);
+
+        const parent = await ParentModel.getItemWithRelated({
+          pk: '1',
+          sk: '1',
+        });
+
+        expect(parent.children).toHaveLength(0);
+        expect(parent.children2).toHaveLength(0);
+
+        await parent.deleteWithChildren();
+
+        ({ items: parentItems } = await ParentModel.scanAll());
+        expect(parentItems).toHaveLength(0);
+
+        ({ items: childItems } = await ChildModel.scanAll());
+        expect(childItems).toHaveLength(0);
+
+        ({ items: child2Items } = await ChildModel2.scanAll());
+        expect(child2Items).toHaveLength(0);
+      });
+
+      test('It should correctly delete only the parent entity with the delete method', async () => {
+        let { items: parentItems } = await ParentModel.scanAll();
+        expect(parentItems).toHaveLength(1);
+
+        let { items: childItems } = await ChildModel.scanAll();
+        expect(childItems).toHaveLength(0);
+
+        let { items: child2Items } = await ChildModel2.scanAll();
+        expect(child2Items).toHaveLength(0);
+
+        const parent = await ParentModel.getItemWithRelated({
+          pk: '1',
+          sk: '1',
+        });
+
+        expect(parent.children).toHaveLength(0);
+        expect(parent.children2).toHaveLength(0);
+
+        await parent.delete();
+
+        ({ items: parentItems } = await ParentModel.scanAll());
+        expect(parentItems).toHaveLength(0);
+
+        ({ items: childItems } = await ChildModel.scanAll());
+        expect(childItems).toHaveLength(0);
+
+        ({ items: child2Items } = await ChildModel2.scanAll());
+        expect(child2Items).toHaveLength(0);
+      });
     });
   });
 });

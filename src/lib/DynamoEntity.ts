@@ -204,12 +204,14 @@ export class DynamoEntity extends Entity {
               item[entityColumnName] === relation.entityName
             ));
 
-            if (relation.type === 'hasMany') {
-              this[relation.propertyName] = relationItems.map((item) => relation.Model.initialize(_.cloneDeep(item)));
-            } else if (relation.type === 'hasOne') {
-              this[relation.propertyName] = relation.Model.initialize(_.cloneDeep(relationItems[0]));
-            } else if (relation.type === 'belongsTo') {
-              this[relation.propertyName] = relation.Model.initialize(_.cloneDeep(relationItems[0]));
+            if (relationItems.length > 0) {
+              if (relation.type === 'hasMany') {
+                this[relation.propertyName] = relationItems.map((item) => relation.Model.initialize(_.cloneDeep(item)));
+              } else if (relation.type === 'hasOne') {
+                this[relation.propertyName] = relation.Model.initialize(_.cloneDeep(relationItems[0]));
+              } else if (relation.type === 'belongsTo') {
+                this[relation.propertyName] = relation.Model.initialize(_.cloneDeep(relationItems[0]));
+              }
             }
           }
         }
@@ -267,7 +269,7 @@ export class DynamoEntity extends Entity {
       if (type === 'hasMany') {
         agg = agg.concat(this[propertyName]);
       } else if (type === 'hasOne') {
-        if (attributes[propertyName] != null) {
+        if (!_.isEmpty(attributes[propertyName])) {
           agg.push(this[propertyName]);
         }
       }
@@ -279,24 +281,27 @@ export class DynamoEntity extends Entity {
       });
     });
 
-    const requestItemsArray = _.chunk(entities, 25).map((chunk) => {
-      return _.entries(
-        _.groupBy(chunk, (entity) => entity._tableName),
-      ).reduce((agg, [tableName, items]) => {
-        agg[tableName] = items.map((entity) => ({
-          DeleteRequest: {
-            Key: entity.dbKey,
-          },
-        }));
-        return agg;
-      }, {} as Record<string, any>);
-    });
+    if (entities.length > 0) {
+      const requestItemsArray = _.chunk(entities, 25).map((chunk) => {
+        return _.entries(
+          _.groupBy(chunk, (entity) => entity._tableName),
+        ).reduce((agg, [tableName, items]) => {
+          agg[tableName] = items.map((entity) => ({
+            DeleteRequest: {
+              Key: entity.dbKey,
+            },
+          }));
+          return agg;
+        }, {} as Record<string, any>);
+      });
 
-    const limit = pLimit(5);
-    await Promise.all(requestItemsArray.map((RequestItems) => {
-      return limit(() => this._dynamodb.send(new BatchWriteCommand({ RequestItems })));
-    }));
-    await this.delete();
+      const limit = pLimit(5);
+      await Promise.all(requestItemsArray.map((RequestItems) => {
+        return limit(() => this._dynamodb.send(new BatchWriteCommand({ RequestItems })));
+      }));
+    }
+
+    return this.delete();
   }
 
   static async deleteItem(key: Record<string, any>, opts?: DeleteCommandInput) {
