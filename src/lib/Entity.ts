@@ -222,7 +222,7 @@ export class Entity {
     return getRelations(this, ['belongsTo']);
   }
 
-  get parents() {
+  get parents(): Entity[] {
     return _.compact(
       this.parentRelations.map((rel) => {
         const parentPropertyName = getParentPropertyName(rel.Model, rel.parentPropertyName, this);
@@ -274,7 +274,7 @@ export class Entity {
     }, {} as Record<string, string>);
   }
 
-  get dbKey() {
+  get dbKey(): Record<string, any> {
     const dbKey = {};
 
     const transformedAttributes = this.transformAttributes();
@@ -423,7 +423,7 @@ export class Entity {
     return new this(item).validate();
   }
 
-  get valid() {
+  get valid(): boolean {
     if (this.dirty) this.validate();
     return this._valid;
   }
