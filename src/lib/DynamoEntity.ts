@@ -12,9 +12,11 @@ import {
   paginateScan,
   paginateQuery,
   QueryCommand,
+  BatchWriteCommand,
 } from '@aws-sdk/lib-dynamodb';
 
 import _ from 'lodash';
+import pLimit from 'p-limit';
 import { Relation } from './decorators/reflections/relations';
 
 import { DynamoPaginator } from './DynamoPaginator';
@@ -248,6 +250,53 @@ export class DynamoEntity extends Entity {
 
       throw error;
     }
+  }
+
+  async deleteWithChildren() {
+    await this.loadWithRelated();
+
+    const { attributes } = this;
+
+    const entities = _.uniqBy(this.childrenRelations.reduce((agg, rel) => {
+      const {
+        propertyName,
+        type,
+      } = rel;
+
+      if (propertyName == null) return agg;
+      if (type === 'hasMany') {
+        agg = agg.concat(this[propertyName]);
+      } else if (type === 'hasOne') {
+        if (attributes[propertyName] != null) {
+          agg.push(this[propertyName]);
+        }
+      }
+      return agg;
+    }, [] as DynamoEntity[]), (e) => {
+      return JSON.stringify({
+        ...e.dbKey,
+        _entityName: e._entityName,
+      });
+    });
+
+    const requestItemsArray = _.chunk(entities, 25).map((chunk) => {
+      return _.entries(
+        _.groupBy(chunk, (entity) => entity._tableName),
+      ).reduce((agg, [tableName, items]) => {
+        agg[tableName] = items.map((entity) => ({
+          DeleteRequest: {
+            Key: entity.dbKey,
+          },
+        }));
+        return agg;
+      }, {} as Record<string, any>);
+    });
+
+    const limit = pLimit(5);
+    await Promise.all(requestItemsArray.map((RequestItems) => {
+      return limit(() => this._dynamodb.send(new BatchWriteCommand({ RequestItems })));
+    }));
+    await this.delete();
   }
 
   static async deleteItem(key: Record<string, any>, opts?: DeleteCommandInput) {
