@@ -214,7 +214,7 @@ export class Entity {
     return _.compact(attributes);
   }
 
-  protected static get attributeList() {
+  public static get attributeList() {
     return this.prototype.attributeList;
   }
 
