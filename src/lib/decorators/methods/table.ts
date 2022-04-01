@@ -31,7 +31,6 @@ if (isTest || isLocal) {
   };
 }
 
-/** @internal */
 export const dynamodbDocumentClient = DynamoDBDocumentClient.from(
   new DynamoDB(dynamoOptions),
   {
@@ -41,6 +40,7 @@ export const dynamodbDocumentClient = DynamoDBDocumentClient.from(
   },
 );
 
+/** @internal */
 export type TableOptions = {
   documentClient?: DynamoDBDocumentClient;
 };

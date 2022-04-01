@@ -10,3 +10,4 @@ export {
   table,
   validate,
 } from './lib/decorators/methods/index';
+export { dynamodbDocumentClient as defaultDynamoDBDocumentClient } from './lib/decorators/methods/table';
