@@ -1,4 +1,5 @@
 import Joi from 'joi';
+import _ from 'lodash';
 import { Entity } from '../src/lib/Entity';
 import { aliases } from '../src/lib/decorators/methods/aliases';
 import { compositeKey } from '../src/lib/decorators/methods/compositeKeys';
@@ -81,6 +82,26 @@ class ExtendedTestModel extends TestModel {
   p2NotNestedOne: TestChildModel;
 }
 
+class CustomTransformationsChild extends Entity {
+  public transformAttributes() {
+    const attributes = super.transformAttributes();
+    if (attributes.firstName || attributes.lastName) {
+      attributes.fullName = _.compact([attributes.firstName, attributes.lastName]).join(' ');
+    }
+
+    return attributes;
+  }
+
+  @prop()
+  firstName: string;
+
+  @prop()
+  lastName: string;
+
+  @prop()
+  fullName: string;
+}
+
 class CustomTransformationsModel extends Entity {
   public transformAttributes() {
     const attributes = super.transformAttributes();
@@ -97,6 +118,9 @@ class CustomTransformationsModel extends Entity {
   @prop({ secondaryKey: true })
   @validate(Joi.number().required())
   p2: number;
+
+  @hasOne(CustomTransformationsChild, { nestedObject: true })
+  child: CustomTransformationsChild;
 }
 
 describe('Entity', () => {
@@ -550,6 +574,34 @@ describe('Entity', () => {
       expect(instance.dbKey).toStrictEqual({
         p1: 'CustomTransformationsModel-1',
         p2: 'CustomTransformationsModel-2',
+      });
+    });
+
+    test('It correctly transfroms child attributes too', () => {
+      const instance = new CustomTransformationsModel({
+        alias1: 1,
+        child: {
+          firstName: 'first',
+          lastName: 'last',
+        },
+      });
+
+      expect(instance.attributes).toStrictEqual({
+        p1: 1,
+        child: {
+          firstName: 'first',
+          lastName: 'last',
+        },
+      });
+
+      expect(instance.transformAttributes()).toStrictEqual({
+        p1: 1,
+        p2: 2,
+        child: {
+          firstName: 'first',
+          lastName: 'last',
+          fullName: 'first last',
+        },
       });
     });
   });

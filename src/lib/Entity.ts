@@ -48,7 +48,7 @@ export class Entity {
 
   protected _attributes: Record<string, any> = {};
 
-  get attributes() {
+  protected getAttributes(childMethod = 'attributes') {
     const attributes = Object.entries(this._attributes).reduce((agg, [key, value]: [string, any]) => {
       let newValue = _.cloneDeep(value);
       const childRelation = this.childrenRelations.find((rel) => rel.propertyName === key);
@@ -57,7 +57,11 @@ export class Entity {
         if (childRelation.type === 'hasMany') {
           newValue = _.compact(newValue.map((item) => item.attributes).filter((item) => !_.isEmpty(item)));
         } else if (childRelation.type === 'hasOne') {
-          newValue = newValue.attributes;
+          if (childMethod === 'transformAttributes') {
+            newValue = newValue[childMethod]();
+          } else {
+            newValue = newValue[childMethod];
+          }
         }
       }
 
@@ -72,6 +76,10 @@ export class Entity {
         || (!_.isObjectLike(value) && _.isUndefined(value))
       );
     });
+  }
+
+  get attributes() {
+    return this.getAttributes();
   }
 
   set attributes(item: Record<string, any>) {
@@ -399,7 +407,7 @@ export class Entity {
   }
 
   protected transformAttributes() {
-    return transformCompositeKeyAttributes(this, this.attributes);
+    return transformCompositeKeyAttributes(this, this.getAttributes('transformAttributes'));
   }
 
   protected static transformAttributes(item: Record<string, any>) {
