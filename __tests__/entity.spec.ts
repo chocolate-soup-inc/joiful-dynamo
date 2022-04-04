@@ -121,6 +121,9 @@ class CustomTransformationsModel extends Entity {
 
   @hasOne(CustomTransformationsChild, { nestedObject: true })
   child: CustomTransformationsChild;
+
+  @hasMany(CustomTransformationsChild, { nestedObject: true })
+  children: CustomTransformationsChild[];
 }
 
 describe('Entity', () => {
@@ -584,6 +587,10 @@ describe('Entity', () => {
           firstName: 'first',
           lastName: 'last',
         },
+        children: [{
+          firstName: 'children first',
+          lastName: 'children last',
+        }],
       });
 
       expect(instance.attributes).toStrictEqual({
@@ -592,6 +599,10 @@ describe('Entity', () => {
           firstName: 'first',
           lastName: 'last',
         },
+        children: [{
+          firstName: 'children first',
+          lastName: 'children last',
+        }],
       });
 
       expect(instance.transformAttributes()).toStrictEqual({
@@ -602,6 +613,11 @@ describe('Entity', () => {
           lastName: 'last',
           fullName: 'first last',
         },
+        children: [{
+          firstName: 'children first',
+          lastName: 'children last',
+          fullName: 'children first children last',
+        }],
       });
     });
   });

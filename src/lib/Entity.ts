@@ -55,7 +55,13 @@ export class Entity {
 
       if (childRelation && value != null) {
         if (childRelation.type === 'hasMany') {
-          newValue = _.compact(newValue.map((item) => item.attributes).filter((item) => !_.isEmpty(item)));
+          newValue = _.compact(newValue.map((item) => {
+            if (childMethod === 'transformAttributes') {
+              return item[childMethod]();
+            }
+
+            return item[childMethod];
+          }).filter((item) => !_.isEmpty(item)));
         } else if (childRelation.type === 'hasOne') {
           if (childMethod === 'transformAttributes') {
             newValue = newValue[childMethod]();
