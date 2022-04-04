@@ -539,4 +539,28 @@ describe('Has one', () => {
       childProperty: { pk: '3', sk: '4' },
     });
   });
+
+  test('Setting a child to {} works', () => {
+    const parent = new TestModel({
+      pk: '1',
+      sk: '2',
+      childProperty: { pk: '3', sk: '4' },
+      child2: { pk: '5', sk: '6' },
+    });
+    expect(parent.attributes).toStrictEqual({
+      pk: '1',
+      sk: '2',
+      childProperty: { pk: '3', sk: '4' },
+      child2: { pk: '5', sk: '6' },
+    });
+
+    // NEEDS EVAL BECAUSE OF TYPESCRIPT TYPE CHECKING
+    // eslint-disable-next-line no-eval
+    eval('parent.child2 = {}');
+    expect(parent.attributes).toStrictEqual({
+      pk: '1',
+      sk: '2',
+      childProperty: { pk: '3', sk: '4' },
+    });
+  });
 });
