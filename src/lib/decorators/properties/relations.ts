@@ -25,7 +25,7 @@ function hasOneSetter(
   value: any,
   foreignKey: string | undefined,
 ) {
-  if (value == null) target.setAttribute(propertyName, undefined);
+  if (value == null) return target.setAttribute(propertyName, undefined);
 
   let finalvalue;
   if (isChild(value, ChildModel)) {
@@ -57,7 +57,7 @@ function hasManySetter(
   value: any,
   foreignKey: string | undefined,
 ) {
-  if (value == null) target.setAttribute(propertyName, undefined);
+  if (value == null) return target.setAttribute(propertyName, undefined);
 
   let finalValue;
   if (isChildArray(value, ChildModel)) {
