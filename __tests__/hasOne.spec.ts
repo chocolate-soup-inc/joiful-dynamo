@@ -491,4 +491,52 @@ describe('Has one', () => {
       expect(model.childProperty.parents).toStrictEqual([model]);
     });
   });
+
+  test('Setting a child to null works', () => {
+    const parent = new TestModel({
+      pk: '1',
+      sk: '2',
+      childProperty: { pk: '3', sk: '4' },
+      child2: { pk: '5', sk: '6' },
+    });
+    expect(parent.attributes).toStrictEqual({
+      pk: '1',
+      sk: '2',
+      childProperty: { pk: '3', sk: '4' },
+      child2: { pk: '5', sk: '6' },
+    });
+
+    // NEEDS EVAL BECAUSE OF TYPESCRIPT TYPE CHECKING
+    // eslint-disable-next-line no-eval
+    eval('parent.child2 = null');
+    expect(parent.attributes).toStrictEqual({
+      pk: '1',
+      sk: '2',
+      childProperty: { pk: '3', sk: '4' },
+    });
+  });
+
+  test('Setting a child to undefined works', () => {
+    const parent = new TestModel({
+      pk: '1',
+      sk: '2',
+      childProperty: { pk: '3', sk: '4' },
+      child2: { pk: '5', sk: '6' },
+    });
+    expect(parent.attributes).toStrictEqual({
+      pk: '1',
+      sk: '2',
+      childProperty: { pk: '3', sk: '4' },
+      child2: { pk: '5', sk: '6' },
+    });
+
+    // NEEDS EVAL BECAUSE OF TYPESCRIPT TYPE CHECKING
+    // eslint-disable-next-line no-eval
+    eval('parent.child2 = undefined');
+    expect(parent.attributes).toStrictEqual({
+      pk: '1',
+      sk: '2',
+      childProperty: { pk: '3', sk: '4' },
+    });
+  });
 });

@@ -53,7 +53,7 @@ export class Entity {
       let newValue = _.cloneDeep(value);
       const childRelation = this.childrenRelations.find((rel) => rel.propertyName === key);
 
-      if (childRelation) {
+      if (childRelation && value != null) {
         if (childRelation.type === 'hasMany') {
           newValue = _.compact(newValue.map((item) => item.attributes).filter((item) => !_.isEmpty(item)));
         } else if (childRelation.type === 'hasOne') {
