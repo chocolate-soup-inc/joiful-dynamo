@@ -1459,6 +1459,15 @@ describe('Dynamo Entity with transform attributes setting the _fk', () => {
           [relationsTableName]: [{
             PutRequest: {
               Item: {
+                pk: 'ParentModel-1',
+                sk: 'ParentModel-2',
+                _fk: 'ParentModel-1-2',
+                _entityName: 'ParentModel',
+              },
+            },
+          }, {
+            PutRequest: {
+              Item: {
                 pk: 'ChildModel-3',
                 sk: 'ChildModel-4',
                 _fk: 'ParentModel-1-2',
@@ -1486,7 +1495,7 @@ describe('Dynamo Entity with transform attributes setting the _fk', () => {
       // FK SET AUTOMATICALLY AS PARENT PK BECAUSE TRANSFORMED _FK IS BLANK
       expect(parent.child.attributes).toStrictEqual({ _fk: '1' });
       expect(parent.children).toHaveLength(0);
-      await parent.loadWithRelated();
+      await expect(() => parent.loadWithRelated()).rejects.toThrowError('Record not found.');
       expect(parent.child.attributes).toStrictEqual({ _fk: '1' });
       expect(parent.children).toHaveLength(0);
     });

@@ -179,6 +179,8 @@ export class DynamoEntity extends Entity {
       }
     }
 
+    if (queries.length === 0) return this.load();
+
     for (const [key, groupedRelations] of Object.entries(
       _.groupBy(queries, (i) => JSON.stringify(i.queryOpts)),
     )) {
@@ -193,6 +195,10 @@ export class DynamoEntity extends Entity {
 
       if (result && result.length > 0) {
         const myAttributes = result.find((r) => r[entityColumnName] === this._entityName);
+
+        if (_.isEmpty(myAttributes)) {
+          throw new Error('Record not found.');
+        }
 
         if (myAttributes) {
           this.attributes = myAttributes;
@@ -215,6 +221,8 @@ export class DynamoEntity extends Entity {
             }
           }
         }
+      } else {
+        throw new Error('Record not found.');
       }
     }
 

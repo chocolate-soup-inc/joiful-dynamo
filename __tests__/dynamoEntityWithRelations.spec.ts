@@ -710,165 +710,101 @@ describe('Dynamo Entity Relations', () => {
   });
 
   describe('relation queries', () => {
-    beforeEach(async () => {
-      await dynamodbDocumentClient.send(new BatchWriteCommand({
-        RequestItems: {
-          [tableName]: [{
-            PutRequest: {
-              Item: {
-                pk: 'ParentModel-1',
-                sk: 'ParentModel-1',
-                _entityName: 'ParentModel',
-                _fk: 'ParentModel-1',
-                name: 'Old Name',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
+    describe('When the parent does not exist', () => {
+      test('It throws and error when loading with related', async () => {
+        const parent = await new ParentModel({
+          pk: '1',
+          sk: '1',
+        });
+
+        await expect(() => parent.loadWithRelated()).rejects.toThrowError('Record not found.');
+      });
+
+      test('It throws and error when getting item related', async () => {
+        await expect(() => ParentModel.getItemWithRelated({
+          pk: '1',
+          sk: '1',
+        })).rejects.toThrowError('Record not found.');
+      });
+    });
+
+    describe('When the parent exists', () => {
+      beforeEach(async () => {
+        await dynamodbDocumentClient.send(new BatchWriteCommand({
+          RequestItems: {
+            [tableName]: [{
+              PutRequest: {
+                Item: {
+                  pk: 'ParentModel-1',
+                  sk: 'ParentModel-1',
+                  _entityName: 'ParentModel',
+                  _fk: 'ParentModel-1',
+                  name: 'Old Name',
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                },
               },
-            },
-          }, {
-            PutRequest: {
-              Item: {
-                pk: 'ChildModel-2',
-                sk: 'ChildModel-2',
-                _entityName: 'ChildModel',
-                _fk: 'ParentModel-1',
-                name: 'Child Name',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
+            }, {
+              PutRequest: {
+                Item: {
+                  pk: 'ChildModel-2',
+                  sk: 'ChildModel-2',
+                  _entityName: 'ChildModel',
+                  _fk: 'ParentModel-1',
+                  name: 'Child Name',
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                },
               },
-            },
-          }],
-        },
-      }));
-    });
-
-    test('When getting the model and just load related later, it works correctly', async () => {
-      const parent = await ParentModel.getItem({
-        pk: '1',
-        sk: '1',
+            }],
+          },
+        }));
       });
 
-      if (parent == null) return;
+      test('When getting the model and just load related later, it works correctly', async () => {
+        const parent = await ParentModel.getItem({
+          pk: '1',
+          sk: '1',
+        });
 
-      expect(parent.child.attributes).toStrictEqual({
-        _fk: '1',
+        if (parent == null) return;
+
+        expect(parent.child.attributes).toStrictEqual({
+          _fk: '1',
+        });
+        expect(parent.child.pk).toBeUndefined();
+        expect(parent.children).toStrictEqual([]);
+
+        await parent.loadWithRelated();
+
+        expect(parent.child).toBeInstanceOf(ChildModel);
+        expect(parent.child.pk).toEqual('2');
+        expect(parent.child.sk).toEqual('2');
+
+        expect(parent.children).toHaveLength(1);
+        expect(parent.children[0]).toBeInstanceOf(ChildModel);
+        expect(parent.children[0].pk).toEqual('2');
+        expect(parent.children[0].sk).toEqual('2');
       });
-      expect(parent.child.pk).toBeUndefined();
-      expect(parent.children).toStrictEqual([]);
 
-      await parent.loadWithRelated();
+      test('When getting the model including related, it correctly sets the related data', async () => {
+        const parent = await ParentModel.getItemWithRelated({
+          pk: '1',
+          sk: '1',
+        });
 
-      expect(parent.child).toBeInstanceOf(ChildModel);
-      expect(parent.child.pk).toEqual('2');
-      expect(parent.child.sk).toEqual('2');
+        if (parent == null) return;
 
-      expect(parent.children).toHaveLength(1);
-      expect(parent.children[0]).toBeInstanceOf(ChildModel);
-      expect(parent.children[0].pk).toEqual('2');
-      expect(parent.children[0].sk).toEqual('2');
-    });
+        expect(parent.child).toBeInstanceOf(ChildModel);
+        expect(parent.child.pk).toEqual('2');
+        expect(parent.child.sk).toEqual('2');
 
-    test('When getting the model including related, it correctly sets the related data', async () => {
-      const parent = await ParentModel.getItemWithRelated({
-        pk: '1',
-        sk: '1',
+        expect(parent.children).toHaveLength(1);
+        expect(parent.children[0]).toBeInstanceOf(ChildModel);
+        expect(parent.children[0].pk).toEqual('2');
+        expect(parent.children[0].sk).toEqual('2');
       });
-
-      if (parent == null) return;
-
-      expect(parent.child).toBeInstanceOf(ChildModel);
-      expect(parent.child.pk).toEqual('2');
-      expect(parent.child.sk).toEqual('2');
-
-      expect(parent.children).toHaveLength(1);
-      expect(parent.children[0]).toBeInstanceOf(ChildModel);
-      expect(parent.children[0].pk).toEqual('2');
-      expect(parent.children[0].sk).toEqual('2');
     });
-
-    // test('When querying with related records it return the records correctly', async () => {
-    //   let {
-    //     items,
-    //   } = await ParentModel.queryWithChildrenRecords({
-    //     IndexName: 'byFK',
-    //     KeyConditionExpression: '#fk = :fk',
-    //     ExpressionAttributeNames: { '#fk': '_fk' },
-    //     ExpressionAttributeValues: { ':fk': 'ParentModel-1' },
-    //   }, '_fk');
-
-    //   expect(items).toHaveLength(2);
-    //   items = items.sort((a, b) => a._entityName.localeCompare(b._entityName));
-
-    //   expect(items[0]).toBeInstanceOf(ChildModel);
-    //   expect(items[1]).toBeInstanceOf(ParentModel);
-
-    //   // ALTHOUGH ITEMS WERE QUERIED, DATA WAS NOT SET IN THE PARENT MODEL.
-    //   expect(items[1].children).toEqual([]);
-    //   expect(items[1].child.pk).toBeUndefined();
-    // });
-
-    // test('When querying all with related records it returns the records correctly', async () => {
-    //   let {
-    //     items,
-    //   } = await ParentModel.queryAllWithChildrenRecords({
-    //     IndexName: 'byFK',
-    //     KeyConditionExpression: '#fk = :fk',
-    //     ExpressionAttributeNames: { '#fk': '_fk' },
-    //     ExpressionAttributeValues: { ':fk': 'ParentModel-1' },
-    //   }, '_fk');
-
-    //   expect(items).toHaveLength(2);
-    //   items = items.sort((a, b) => a._entityName.localeCompare(b._entityName));
-
-    //   expect(items[0]).toBeInstanceOf(ChildModel);
-    //   expect(items[1]).toBeInstanceOf(ParentModel);
-
-    //   // ALTHOUGH ITEMS WERE QUERIED, DATA WAS NOT SET IN THE PARENT MODEL.
-    //   expect(items[1].children).toEqual([]);
-    //   expect(items[1].child.pk).toBeUndefined();
-    // });
-
-    // test('When querying the child with related records it returns the records correctly', async () => {
-    //   let {
-    //     items,
-    //   } = await ChildModel.queryWithChildrenRecords({
-    //     IndexName: 'byFK',
-    //     KeyConditionExpression: '#fk = :fk',
-    //     ExpressionAttributeNames: { '#fk': '_fk' },
-    //     ExpressionAttributeValues: { ':fk': 'ParentModel-1' },
-    //   }, '_fk');
-
-    //   expect(items).toHaveLength(2);
-    //   items = items.sort((a, b) => a._entityName.localeCompare(b._entityName));
-
-    //   expect(items[0]).toBeInstanceOf(ChildModel);
-    //   expect(items[1]).toBeInstanceOf(ParentModel);
-
-    //   // ALTHOUGH ITEMS WERE QUERIED, DATA WAS NOT SET IN THE PARENT MODEL.
-    //   expect(items[1].children).toEqual([]);
-    //   expect(items[1].child.pk).toBeUndefined();
-    // });
-
-    // test('When querying all the child with related records it returns the records correctly', async () => {
-    //   let {
-    //     items,
-    //   } = await ChildModel.queryAllWithChildrenRecords({
-    //     IndexName: 'byFK',
-    //     KeyConditionExpression: '#fk = :fk',
-    //     ExpressionAttributeNames: { '#fk': '_fk' },
-    //     ExpressionAttributeValues: { ':fk': 'ParentModel-1' },
-    //   }, '_fk');
-
-    //   expect(items).toHaveLength(2);
-    //   items = items.sort((a, b) => a._entityName.localeCompare(b._entityName));
-
-    //   expect(items[0]).toBeInstanceOf(ChildModel);
-    //   expect(items[1]).toBeInstanceOf(ParentModel);
-
-    //   // ALTHOUGH ITEMS WERE QUERIED, DATA WAS NOT SET IN THE PARENT MODEL.
-    //   expect(items[1].children).toEqual([]);
-    //   expect(items[1].child.pk).toBeUndefined();
-    // });
   });
 
   describe('belongsTo', () => {
