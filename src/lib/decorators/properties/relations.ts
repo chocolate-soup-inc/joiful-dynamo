@@ -107,7 +107,7 @@ export function addRelationDescriptor({
       get() { return hasOneGetter(this, propertyName, ChildModel, foreignKey); },
       set(v) {
         const instance = hasOneSetter(this, propertyName, ChildModel, v, foreignKey);
-        instance[parentPropertyName] = this;
+        if (instance != null) instance[parentPropertyName] = this;
       },
       enumerable: true,
       configurable: false,
@@ -117,9 +117,11 @@ export function addRelationDescriptor({
       get() { return hasManyGetter(this, propertyName, ChildModel, foreignKey); },
       set(v) {
         const instances = hasManySetter(this, propertyName, ChildModel, v, foreignKey);
-        instances.forEach((instance) => {
-          instance[parentPropertyName] = this;
-        });
+        if (instances != null && Array.isArray(instances)) {
+          instances.forEach((instance) => {
+            instance[parentPropertyName] = this;
+          });
+        }
       },
       enumerable: true,
       configurable: false,
