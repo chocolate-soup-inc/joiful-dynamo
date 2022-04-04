@@ -1127,4 +1127,15 @@ describe('Dynamo Entity Relations', () => {
       });
     });
   });
+
+  test('children without parent relations', async () => {
+    let { items: children } = await ChildModel.scanAll();
+    expect(children).toHaveLength(0);
+
+    const child = new ChildModel({ sk: '1', pk: '2', name: 'Child Model Name' });
+    child.update();
+
+    ({ items: children } = await ChildModel.scanAll());
+    expect(children).toHaveLength(1);
+  });
 });

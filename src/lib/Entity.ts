@@ -245,11 +245,13 @@ export class Entity {
       } = rel;
 
       if (foreignKey) {
-        const value = transformedAttributes[foreignKey] || this[foreignKey];
+        let value = transformedAttributes[foreignKey] || this[foreignKey];
 
         if (typeof value === 'string' && !value.startsWith(ParentModel._entityPrefix)) {
-          agg[foreignKey] = `${ParentModel._entityPrefix}${value}`;
-        } else {
+          value = `${ParentModel._entityPrefix}${value}`;
+        }
+
+        if (value) {
           agg[foreignKey] = value;
         }
       }
@@ -267,7 +269,10 @@ export class Entity {
       } = rel;
 
       if (foreignKey != null && this._primaryKey != null) {
-        agg[foreignKey] = `${this._entityPrefix}${transformedAttributes[foreignKey] || this[foreignKey]}`;
+        const value = `${this._entityPrefix}${transformedAttributes[foreignKey] || this[foreignKey]}`;
+        if (value != null) {
+          agg[foreignKey] = value;
+        }
       }
 
       return agg;
