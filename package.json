@@ -1,6 +1,6 @@
 {
   "name": "@chocolatesoup/joiful-dynamodb",
-  "version": "2.0.21",
+  "version": "2.0.22",
   "description": "Project to interact with Dynamodb having some basic ORM functions like basic relations and validations.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -15,7 +15,7 @@
     "test": "jest --cache --colors --detectOpenHandles --forceExit --maxWorkers=3",
     "test:watch": "jest --cache --colors --detectOpenHandles --forceExit --maxWorkers=3 --watchAll",
     "test:clearCache": "jest --clearCache",
-    "build": "rm -rf ./dist/ && tsc",
+    "build": "rm -rf ./dist/ && rm -rf ./coverage/ && tsc",
     "lint": "eslint --fix . --ext .js,.ts",
     "build:docs": "rm -rf ./docs/ && typedoc",
     "prepare": "husky install"

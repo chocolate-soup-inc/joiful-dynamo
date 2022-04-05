@@ -283,9 +283,10 @@ export class Entity {
       } = rel;
 
       if (foreignKey != null && this._primaryKey != null) {
-        const value = `${this._entityPrefix}${transformedAttributes[foreignKey] || this[foreignKey]}`;
-        if (value != null) {
-          agg[foreignKey] = value;
+        const value = transformedAttributes[foreignKey] || transformedAttributes[this._primaryKey] || this[foreignKey];
+
+        if (value != null && !value.startsWith(this._entityPrefix)) {
+          agg[foreignKey] = `${this._entityPrefix}${value}`;
         }
       }
 
